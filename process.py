@@ -5,6 +5,20 @@ MATLAB = '/Applications/MATLAB_R2014a.app/Contents/MacOSX/MATLAB_maci64'
 SIFT_DETECT_SCRIPT = 'siftdetect.m'
 SIFT_OUTPUT = 'sift.txt'
 
+'''
+We will give the following to this part of the pipeline:
+  ??? -- presumably something that points to directory of scans
+We expect to receive the following from this part of the pipeline:
+  list of dictionaries with format
+  [{
+    'coords':(x,y,z),
+    'rotation':(rx,ry,rz),
+    'fileloc':'components/button.stl'
+    },
+    ...
+  ]
+'''
+
 def callMatlab(script):
   call = [MATLAB, '-nodesktop', '-nodisplay', '-nosplash', '-nojvm',
           '-r', script]
@@ -24,8 +38,20 @@ def identifyComponents():
 OPENSCAD = '/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD'
 CHECK_SIZE_SCRIPT = os.path.join(os.getcwd(), 'checksize.scad')
 CHECK_INTERSECT_SCRIPT = os.path.join(os.getcwd(), 'checkintersect.scad')
-PART_AND_BOSS_SCRIPT = os.path.join(os.getcwd(), 'partboss.scad')
+SUB_COMPONENT_SCRIPT = os.path.join(os.getcwd(), 'subcomps.scad')
+PART_SCRIPT = os.path.join(os.getcwd(), 'part.scad')
+BOSS_SCRIPT = os.path.join(os.getcwd(), 'boss.scad')
 SCRATCH = os.path.join(os.getcwd(),'scratch.stl')
+
+'''
+We will give the following to this part of the pipeline:
+  list of dictionaries of components with format above
+  STL file of scanned object
+We expect to receive the following from this part of the pipeline:
+  1st time : model w/o intersecting components & w/ enough space for components
+  2nd time : two files with subbed comps, bosses, and parting lines
+
+'''
 
 def callOpenSCAD(script, oname, otherargs=''):
   call = [OPENSCAD, '-o', oname, otherargs, script]
@@ -68,7 +94,11 @@ intersection() {
     'comp_1':components[1]['fileloc'],
     'rot_1':components[1]['rotation'],
   }
-  if script is PART_AND_BOSS_SCRIPT:
+  if script is SUB_COMPONENT_SCRIPT:
+    text = "# Sean, fill me in!"
+  if script is PART_SCRIPT:
+    text = "# Sean, fill me in!"
+  if script is BOSS_SCRIPT:
     text = "# Sean, fill me in!"
   if debug:
     print text
@@ -108,6 +138,14 @@ def checkIntersections(components):
 MESHLAB = '/Applications/meshlab.app/Contents/MacOS/meshlabserver'
 SHELL_SCRIPT = os.path.join(os.getcwd(), 'shell.meshlab')
 
+'''
+We will give the following to this part of the pipeline:
+  STL file of scanned object
+We expect to receive the following from this part of the pipeline:
+  shelled STL file of scanned object
+
+'''
+
 def callMeshlab(fname, oname, script='', otherargs=''):
   call = [MESHLAB, '-i', fname, '-o', oname, '-s', script, otherargs]
   # this will throw an exception if the call fails for some reason
@@ -120,8 +158,10 @@ def main(body):
   #components = identifyComponents(body)
   #checkSize(components, body)
   #checkIntersections(components)
-  #partAndBoss(components, body)
-  #shellPart(body)
+  #shell(body)
+  #substitute_components(body,components)
+  #bosses(body)
+  #partingLine(components, body)
 
 if __name__ == '__main__':
   main(sys.argv[1])
