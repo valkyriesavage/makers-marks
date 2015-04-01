@@ -1,0 +1,6 @@
+*.pyc
+.*.swp
+scratch.stl
+checksize.scad
+checkintersect.scad
+partboss.scad
