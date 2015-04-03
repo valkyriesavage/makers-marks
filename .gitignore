@@ -1,4 +1,5 @@
 *.pyc
+*.m~
 .*.swp
 scratch.stl
 checksize.scad

@@ -1,9 +1,10 @@
 import os, subprocess
 
 ''' Matlab location and scripts '''
-MATLAB = '/Applications/MATLAB_R2014a.app/Contents/MacOSX/MATLAB_maci64'
-SIFT_DETECT_SCRIPT = 'siftdetect.m'
-SIFT_OUTPUT = 'sift.txt'
+MATLAB = '/Applications/MATLAB_R2014a.app/Contents/MacOS/MATLAB_maci64'
+SIFT_DETECT_SCRIPT = os.path.join(os.getcwd(), 'siftdetect.m')
+FIND_ROTATION_SCRIPT = os.path.join(os.getcwd(), 'findrot.m')
+SIFT_OUTPUT = os.path.join(os.getcwd(), 'sift.txt')
 
 '''
 We will give the following to this part of the pipeline:
@@ -23,6 +24,7 @@ def callMatlab(script):
   call = [MATLAB, '-nodesktop', '-nodisplay', '-nosplash', '-nojvm',
           '-r', script]
   # this will throw an exception if the call fails for some reason
+  print call
   subprocess.check_call(call)
 
 def extractComponentInfo(location=SIFT_OUTPUT):
@@ -136,7 +138,7 @@ def checkIntersections(components):
 
 ''' Meshlab location and scripts '''
 MESHLAB = '/Applications/meshlab.app/Contents/MacOS/meshlabserver'
-SHELL_SCRIPT = os.path.join(os.getcwd(), 'shell.meshlab')
+SHELL_SCRIPT = os.path.join(os.getcwd(), 'shell.mlx')
 
 '''
 We will give the following to this part of the pipeline:
@@ -146,8 +148,10 @@ We expect to receive the following from this part of the pipeline:
 
 '''
 
-def callMeshlab(fname, oname, script='', otherargs=''):
-  call = [MESHLAB, '-i', fname, '-o', oname, '-s', script, otherargs]
+def callMeshlab(fname, oname, script=SHELL_SCRIPT, otherargs=''):
+  call = [MESHLAB, '-i', fname, '-o', oname, '-s', script]
+  if otherargs:
+    call.append(otherargs)
   # this will throw an exception if the call fails for some reason
   subprocess.check_call(call)
 
@@ -162,6 +166,7 @@ def main(body):
   #substitute_components(body,components)
   #bosses(body)
   #partingLine(components, body)
+  print 'done!'
 
 if __name__ == '__main__':
   main(sys.argv[1])
