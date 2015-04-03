@@ -3,18 +3,24 @@ addpath('rot/');
 % ok, we are being given two sets of things: one is a set of 2D points
 % the other is a set of 3D points.  we need to figure out the rotation.
 
-% TODO scaling!!
+% TODO scaling!!??
+
+%% VARIABLES (except these never change... we need commandline vars)
 
 sticker_top_left = [0,0,0];
 sticker_top_right = [1,0,0];
 sticker_center = [.5,.5,0];
 sticker_normal = [0,0,1];
 
+%% TRANSLATION
+
 % translate the normal/z-axis into place
 x_translate = threed_center(1)-sticker_center(1);
 y_translate = threed_center(2)-sticker_center(2);
 z_translate = threed_center(3)-sticker_center(3);
 translation = [x_translate, y_translate, z_translate];
+
+%% ROTATION TO ALIGN NORMALS
 
 % find out what rotations around x and y actually make 'em align
 % note that we have to work with a translated 3D normal... to make it
@@ -44,19 +50,29 @@ end
 translated_tl = sticker_top_left + translation;
 translated_tr = rotated_tr + translation;
 
+%% ROTATION ABOUT Z
+
 % ok!  now we just have to figure out the rotation about z.
 translated_sticker_vect = translated_tr-translated_tl;
 threed_vect = threed_top_right-threed_top_left;
 mags = norm(translated_sticker_vect)*norm(threed_vect);
 
-z_rot = acos(dot(translated_sticker_vect, threed_vect)/mags);
-% can use acosd if we want degrees instead of radians
+z_rot = acosd(dot(translated_sticker_vect, threed_vect)/mags);
+% can use acos if we want radians instead of degrees, but openSCAD takes
+% degrees
+
+%% OUTPUT
+
+translation
+rot_axis
+rot_angle
+threed_normal
 z_rot
 
-
-fileID = fopen('rot_trans.txt','w+');
+fileID = fopen('transform.txt','w+');
 fprintf(fileID,'translation [%d,%d,%d]\n',translation);
 fprintf(fileID,'xyrotationvect [%d,%d,%d]\n',rot_axis);
 fprintf(fileID,'xyrotationangle [%d]\n',rot_angle);
+fprintf(fileID,'normal [%d,%d,%d]\n',threed_normal);
 fprintf(fileID,'zrotation %d',z_rot);
 fclose(fileID);
