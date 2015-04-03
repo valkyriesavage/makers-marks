@@ -3,15 +3,12 @@ addpath('rot/');
 % ok, we are being given two sets of things: one is a set of 2D points
 % the other is a set of 3D points.  we need to figure out the rotation.
 
+% TODO scaling!!
+
 sticker_top_left = [0,0,0];
 sticker_top_right = [1,0,0];
 sticker_center = [.5,.5,0];
 sticker_normal = [0,0,1];
-
-threed_top_left = [0,0,1];
-threed_top_right = [sqrt(2),sqrt(2),1];
-threed_center = [.5,.5,1];
-threed_normal = [0,0,2];
 
 % translate the normal/z-axis into place
 x_translate = threed_center(1)-sticker_center(1);
@@ -56,4 +53,10 @@ z_rot = acos(dot(translated_sticker_vect, threed_vect)/mags);
 % can use acosd if we want degrees instead of radians
 z_rot
 
-%exit();
+
+fileID = fopen('rot_trans.txt','w+');
+fprintf(fileID,'translation [%d,%d,%d]\n',translation);
+fprintf(fileID,'xyrotationvect [%d,%d,%d]\n',rot_axis);
+fprintf(fileID,'xyrotationangle [%d]\n',rot_angle);
+fprintf(fileID,'zrotation %d',z_rot);
+fclose(fileID);

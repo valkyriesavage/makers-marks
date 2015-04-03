@@ -1,4 +1,4 @@
-import os, subprocess
+import os, subprocess, sys
 
 ''' Matlab location and scripts '''
 MATLAB = '/Applications/MATLAB_R2014a.app/bin/matlab'
@@ -20,10 +20,13 @@ We expect to receive the following from this part of the pipeline:
   ]
 '''
 
-def callMatlab(script):
+def callMatlab(script, variables={}):
   script_path, script_name = os.path.split(script)
   script_name = script_name.split('.m')[0]
-  matlab_calls = 'addpath(\'%s\'); %s; exit();' % (script_path, script_name)
+  matlab_calls = 'addpath(\'%s\');' % script_path
+  for var, val in variables.iteritems():
+    matlab_calls += '%s = %s; ' % (str(var),str(val))
+  matlab_calls += '%s; exit();' % script_name
   call = [MATLAB, '-nodesktop', '-nodisplay', '-nosplash', '-nojvm',
           '-r', matlab_calls]
   print ' '.join(call)
@@ -161,7 +164,8 @@ def callMeshlab(fname, oname, script=SHELL_SCRIPT, otherargs=''):
 
 ''' main function '''
 
-def main(body):
+def main(obj):
+  print obj
   #components = identifyComponents(body)
   #checkSize(components, body)
   #checkIntersections(components)
