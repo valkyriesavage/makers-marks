@@ -1,7 +1,7 @@
 import os, subprocess
 
 ''' Matlab location and scripts '''
-MATLAB = '/Applications/MATLAB_R2014a.app/Contents/MacOS/MATLAB_maci64'
+MATLAB = '/Applications/MATLAB_R2014a.app/bin/matlab'
 SIFT_DETECT_SCRIPT = os.path.join(os.getcwd(), 'siftdetect.m')
 FIND_ROTATION_SCRIPT = os.path.join(os.getcwd(), 'findrot.m')
 SIFT_OUTPUT = os.path.join(os.getcwd(), 'sift.txt')
@@ -21,10 +21,13 @@ We expect to receive the following from this part of the pipeline:
 '''
 
 def callMatlab(script):
+  script_path, script_name = os.path.split(script)
+  script_name = script_name.split('.m')[0]
+  matlab_calls = 'addpath(\'%s\'); %s; exit();' % (script_path, script_name)
   call = [MATLAB, '-nodesktop', '-nodisplay', '-nosplash', '-nojvm',
-          '-r', script]
+          '-r', matlab_calls]
+  print ' '.join(call)
   # this will throw an exception if the call fails for some reason
-  print call
   subprocess.check_call(call)
 
 def extractComponentInfo(location=SIFT_OUTPUT):
