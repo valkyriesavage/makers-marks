@@ -40,8 +40,7 @@ else
     % since rot_axis is in STICKER SPACE we just need to slide it over
     % from the center of the sticker to the upper right corner.
     rot_axis = rot_axis - sticker_center;
-    rot_axis
-    sticker_top_right
+    rot_axis = rot_axis./norm(rot_axis);
     rotated_tr = rotVecAroundArbAxis(sticker_top_right,rot_axis,rot_angle);
 end
 
@@ -70,9 +69,9 @@ threed_normal
 z_rot
 
 fileID = fopen('transform.txt','w+');
-fprintf(fileID,'translation [%d,%d,%d]\n',translation);
-fprintf(fileID,'xyrotationvect [%d,%d,%d]\n',rot_axis);
-fprintf(fileID,'xyrotationangle [%d]\n',rot_angle);
-fprintf(fileID,'normal [%d,%d,%d]\n',threed_normal);
-fprintf(fileID,'zrotation %d',z_rot);
+fprintf(fileID,'coords [%.4f,%.4f,%.4f]\n',translation);
+fprintf(fileID,'align_rot_vect [%.4f,%.4f,%.4f]\n',rot_axis);
+fprintf(fileID,'align_rot_angle %.4f\n',radtodeg(rot_angle));
+fprintf(fileID,'normal [%.4f,%.4f,%.4f]\n',threed_normal);
+fprintf(fileID,'normal_rotation %.4f',z_rot);
 fclose(fileID);

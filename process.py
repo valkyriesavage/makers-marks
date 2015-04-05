@@ -28,7 +28,10 @@ def callMatlab(script, variables={}):
   script_name = script_name.split('.m')[0]
   matlab_calls = 'addpath(\'%s\'); ' % script_path
   for var, val in variables.iteritems():
-    matlab_calls += '%s = %s; ' % (str(var),str(val))
+    if isinstance(val, basestring):
+      matlab_calls += '%s = \'%s\'; ' % (str(var),str(val))
+    else:
+      matlab_calls += '%s = %s; ' % (str(var),str(val))
   matlab_calls += '%s; exit();' % script_name
   call = [MATLAB, '-nodesktop', '-nodisplay', '-nosplash', '-nojvm',
           '-r', matlab_calls]
@@ -36,14 +39,31 @@ def callMatlab(script, variables={}):
   subprocess.check_call(call)
 
 def extractComponentInfo(location=TRANSFORM_OUTPUT):
+  info = {}
   with open(location) as f:
     for line in f:
-      print line
+      name,val = line.split()
+      # a totally unsafe practice.  but... eh.
+      info[name] = eval(val)
+  return info
+
+def getAlignmentInfo(component):
+  # in here we need threed_center, threed_top_right,
+  # threed_top_left, and threed_normal
+  callMatlab(FIND_ROTATION_SCRIPT, component)
+  calculated = extractComponentInfo(location=TRANSFORM_OUTPUT)
+  component.update(calculated)
+  return component
 
 def identifyComponents():
   callMatlab(SIFT_DETECT_SCRIPT)
-  return extractComponentInfo(SIFT_OUTPUT)
-
+  comp_list = extractComponentInfo(SIFT_OUTPUT)
+  # now call c++...
+  # TODO call c++ here!
+  for component in comp_list.keys():
+    comp = comp_list[component]
+    comp_list[component] = getAlignmentInfo(comp)
+  return comp_list
 
 ''' C++ locations and scripts '''
 FIND_3D_COORDS_SCRIPT = os.path.join(os.getcwd(), 'sth.out')
@@ -79,9 +99,9 @@ def callOpenSCAD(script, oname, otherargs=''):
 
 def placeCompOpenSCAD(component, geom_key='file_loc'):
   output = '''translate(%(coords)s) {
-  rotate(a=%(align_rot_angle)s ,v=%(align_rot_vect)s ) {
-    rotate(a=%(normal_rotation)s ,v=%(normal)s ) {
-      import(%('''+geom_key+''')s );
+  rotate(a=%(align_rot_angle)s,v=%(align_rot_vect)s) {
+    rotate(a=%(normal_rotation)s,v=%(normal)s) {
+      import("%('''+geom_key+''')s");
     }
   }
 }
