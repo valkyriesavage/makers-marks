@@ -13,10 +13,8 @@ We expect to receive the following from this part of the pipeline:
   list of dictionaries with format
   [{
     'coords':(x,y,z),
-    'align_rot_vect':(x,y,z),
-    'align_rot_angle':theta,
+    'rotations':(x,y,z),
     'normal':(x,y,z),
-    'normal_rotation':r_n,
     'fileloc':'components/button.stl'
     },
     ...
@@ -98,11 +96,11 @@ def callOpenSCAD(script, oname, otherargs=''):
   subprocess.check_call(call)
 
 def placeCompOpenSCAD(component, geom_key='file_loc'):
-  output = '''translate(%(coords)s) {
-  rotate(a=%(align_rot_angle)s,v=%(align_rot_vect)s) {
-    rotate(a=%(normal_rotation)s,v=%(normal)s) {
-      import("%('''+geom_key+''')s");
-    }
+  output = '''
+translate(%(coords)s) {
+  rotate(%(rotations)s) {
+    scale(4)
+    import("%('''+geom_key+''')s");
   }
 }
 '''

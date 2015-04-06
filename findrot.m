@@ -3,12 +3,10 @@ addpath('rot/');
 % ok, we are being given two sets of things: one is a set of 2D points
 % the other is a set of 3D points.  we need to figure out the rotation.
 
-% TODO scaling!!??
-
 %% VARIABLES (except these never change... we need commandline vars)
 
-sticker_top_left = [0,0,0];
-sticker_top_right = [1,0,0];
+sticker_top_left = [0,1,0];
+sticker_top_right = [1,1,0];
 sticker_center = [.5,.5,0];
 sticker_normal = [0,0,1];
 
@@ -22,56 +20,30 @@ translation = [x_translate, y_translate, z_translate];
 
 %% ROTATION TO ALIGN NORMALS
 
-% find out what rotations around x and y actually make 'em align
-% note that we have to work with a translated 3D normal... to make it
-% appear to be a unit vector with the same origin as sticker_normal
-r = vrrotvec(sticker_normal, (threed_normal - translation));
-% note, rot_axis is right now in STICKER SPACE (not 3D space)
-rot_axis = r(1:3);
-rot_angle = r(4);
+threed_norm_polar = [norm(threed_normal), ...
+                     acos(threed_normal(3)/norm(threed_normal)), ...
+                     atan2(threed_normal(2),threed_normal(1))];
+r = threed_norm_polar(1);
+theta = threed_norm_polar(2);
+phi = threed_norm_polar(3);
+x_rot = 0;
+y_rot = theta;
+z_rot = phi;
 
-% rotate the x axes into place.
-if (isequal(rot_axis, [0,0,0]) || isequal(rot_angle, 0))
-    % this means we didn't have to rotate in X and Y.
-    % just do Z in the next step.
-    rotated_tr = sticker_top_right;
-else
-    % to rotate, we need to align the bases of the vectors
-    % since rot_axis is in STICKER SPACE we just need to slide it over
-    % from the center of the sticker to the upper right corner.
-    rot_axis = rot_axis - sticker_center;
-    rot_axis = rot_axis./norm(rot_axis);
-    rotated_tr = rotVecAroundArbAxis(sticker_top_right,rot_axis,rot_angle);
-end
+%% ROTATION TO ALIGN CORNERS
 
-% now slide the x-axes to match
 
-translated_tl = sticker_top_left + translation;
-translated_tr = rotated_tr + translation;
+%axis_rot = 0;
 
-%% ROTATION ABOUT Z
-
-% ok!  now we just have to figure out the rotation about z.
-translated_sticker_vect = translated_tr-translated_tl;
-threed_vect = threed_top_right-threed_top_left;
-mags = norm(translated_sticker_vect)*norm(threed_vect);
-
-z_rot = acosd(dot(translated_sticker_vect, threed_vect)/mags);
-% can use acos if we want radians instead of degrees, but openSCAD takes
-% degrees
 
 %% OUTPUT
 
 translation
-rot_axis
-rot_angle
-threed_normal
-z_rot
+rotation = [radtodeg(x_rot),radtodeg(y_rot),radtodeg(z_rot)]
+axis_rot
 
 fileID = fopen('transform.txt','w+');
 fprintf(fileID,'coords [%.4f,%.4f,%.4f]\n',translation);
-fprintf(fileID,'align_rot_vect [%.4f,%.4f,%.4f]\n',rot_axis);
-fprintf(fileID,'align_rot_angle %.4f\n',radtodeg(rot_angle));
-fprintf(fileID,'normal [%.4f,%.4f,%.4f]\n',threed_normal);
-fprintf(fileID,'normal_rotation %.4f',z_rot);
+fprintf(fileID,'rotations [%.4f,%.4f,%.4f]\n',rotation);
+fprintf(fileID,'axis [%.4f,%.4f,%.4f]\n',rotation);
 fclose(fileID);
