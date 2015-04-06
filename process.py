@@ -13,7 +13,8 @@ We expect to receive the following from this part of the pipeline:
   list of dictionaries with format
   [{
     'coords':(x,y,z),
-    'rotations':(x,y,z),
+    'rotations':(0,y,z),
+    'axis_rot':theta,
     'normal':(x,y,z),
     'fileloc':'components/button.stl'
     },
@@ -99,8 +100,9 @@ def placeCompOpenSCAD(component, geom_key='file_loc'):
   output = '''
 translate(%(coords)s) {
   rotate(%(rotations)s) {
-    scale(4)
-    import("%('''+geom_key+''')s");
+    rotate([0,0,%(axis_rot)s) {
+      import("%('''+geom_key+''')s");
+    }
   }
 }
 '''
