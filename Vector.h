@@ -64,9 +64,9 @@ Vector Vector::operator / (float c) {
 
 std::ostream& operator<< (std::ostream &out, Vector &vector)
 {
-    out << "(" << vector.x << ", " <<
-        vector.y << ", " <<
-        vector.z << ")\n";
+    out << "[" << vector.x << "," <<
+        vector.y << "," <<
+        vector.z << "]\n";
     return out;
 }
 

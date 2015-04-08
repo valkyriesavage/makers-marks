@@ -6,3 +6,5 @@ checksize.scad
 checkintersect.scad
 partboss.scad
 transform.txt
+setup.m
+process.pyc

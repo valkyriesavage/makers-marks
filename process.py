@@ -1,10 +1,16 @@
 import os, subprocess, sys
 
 ''' Matlab location and scripts '''
-MATLAB = '/Applications/MATLAB_R2014a.app/bin/matlab'
+MATLAB = ''
+if os.path.exists('/Applications/MATLAB_R2014a.app/bin/matlab'):
+  MATLAB = '/Applications/MATLAB_R2014a.app/bin/matlab'
+if os.path.exists('/Applications/MATLAB_R2014b.app/bin/matlab'):
+  MATLAB = '/Applications/MATLAB_R2014b.app/bin/matlab'
 SIFT_DETECT_SCRIPT = os.path.join(os.getcwd(), 'siftdetect.m')
 FIND_ROTATION_SCRIPT = os.path.join(os.getcwd(), 'findrot.m')
 TRANSFORM_OUTPUT = os.path.join(os.getcwd(), 'transform.txt')
+SIFT_OUTPUT = os.path.join(os.getcwd(), 'sift.txt')
+
 
 '''
 We will give the following to this part of the pipeline:
@@ -16,7 +22,13 @@ We expect to receive the following from this part of the pipeline:
     'rotations':(0,y,z),
     'axis_rot':theta,
     'normal':(x,y,z),
-    'fileloc':'components/button.stl'
+    'fileloc':'components/button.stl',
+    'filename': 'texture_T1.jpg',
+    'left': (u,v),
+    'right': (u,v),
+    'center': (u,v),    <- these three are for the C++ program
+    'threed_center': (x,y,z),
+    ...
     },
     ...
   ]
@@ -37,7 +49,7 @@ def callMatlab(script, variables={}):
   # this will throw an exception if the call fails for some reason
   subprocess.check_call(call)
 
-def extractComponentInfo(location=TRANSFORM_OUTPUT):
+def extractComponentInfo(location=TRANSFORM_OUTPUT): #currently not in use - delete at end
   info = {}
   with open(location) as f:
     for line in f:
@@ -45,6 +57,23 @@ def extractComponentInfo(location=TRANSFORM_OUTPUT):
       # a totally unsafe practice.  but... eh.
       info[name] = eval(val)
   return info
+
+def extractSIFTComponentInfo(location=SIFT_OUTPUT):
+  centroid_locations = [] 
+  with open(location) as f:
+    for l in f:
+      name, val = l.split()
+      if name == 'sticker':
+        sticker_dict = {}
+      elif name == 'filename':
+        sticker_dict[name] = val
+      elif name == 'left' or name == 'center':
+        sticker_dict[name] = eval(val)        
+      elif name == 'right':
+        #this assumes right is the last thing we see
+        sticker_dict[name] = eval(val)
+        centroid_locations.append(sticker_dict.copy())
+  return centroid_locations
 
 def getAlignmentInfo(component):
   # in here we need threed_center, threed_top_right,
@@ -54,23 +83,46 @@ def getAlignmentInfo(component):
   component.update(calculated)
   return component
 
-def identifyComponents():
+def identifyComponents(obj):
   callMatlab(SIFT_DETECT_SCRIPT)
-  comp_list = extractComponentInfo(SIFT_OUTPUT)
+  comp_list = extractSIFTComponentInfo(SIFT_OUTPUT)
   # now call c++...
-  # TODO call c++ here!
-  for component in comp_list.keys():
-    comp = comp_list[component]
-    comp_list[component] = getAlignmentInfo(comp)
-  return comp_list
+  for tag_dictionary in comp_list: #get dictionaries through list
+    args = ["./triCheck", obj]
+    #local declaration...this code is so bad? i'm sorry
+    correct_jpg, left_u, left_v, center_u, center_v, right_u, right_v = '', '', '', '', '', '', ''
+    for tag in tag_dictionary.keys():
+      if tag == 'filename':
+        correct_jpg = tag_dictionary[tag]
+      elif tag == 'left':
+        left_u, left_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
+      elif tag == 'center':
+        center_u, center_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1]) 
+      elif tag == 'right':
+        right_u, right_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
+    args.extend((correct_jpg, left_u, left_v, center_u, center_v, right_u, right_v))
+    callCpp(tag_dictionary, args)
+  #now dictionary modified with threed_etc additions
+  for tag_dictionary in comp_list:  
+    for component in tag_dictionary.keys():
+      comp = tag_dictionary[component]
+      #call getAlignmentInfo here!
+      #tag_dictionary[component] = getAlignmentInfo(comp) #reassigning the value
+    return comp_list
 
-''' C++ locations and scripts '''
-FIND_3D_COORDS_SCRIPT = os.path.join(os.getcwd(), 'sth.out')
-
-def callCpp(script, args=''):
-  call = [script, args]
-  # this will throw an exception if the call fails for some reason
-  subprocess.check_call(call)
+def callCpp(tag_dictionary, args):
+  #args = ['./triCheck', 'filename', 'lu', 'lv', 'cu', 'cv', 'ru', 'rv']
+  proc = subprocess.Popen(args, stdout=subprocess.PIPE)
+  for line in proc.stdout:
+    name, value = line.split()
+    if name == 'Left':
+      tag_dictionary['threed_top_left'] = eval(value)
+    elif name == 'Center':
+      tag_dictionary['threed_center'] = eval(value)
+    elif name == 'Right':
+      tag_dictionary['threed_top_right'] = eval(value)
+    elif name == 'Normal':
+      tag_dictionary['threed_normal'] = eval(value)
 
 ''' OpenSCAD location and scripts '''
 OPENSCAD = '/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD'
@@ -108,7 +160,7 @@ translate(%(coords)s) {
 '''
   return output % component
 
-def writeOpenSCAD(script, components, body='', debug=False):
+def writeOpenSCAD(script, components, obj='', debug=False):
   text = ''
   if script is CHECK_SIZE_SCRIPT:
     comps = ''
@@ -116,10 +168,10 @@ def writeOpenSCAD(script, components, body='', debug=False):
       comps += placeCompOpenSCAD(component, geom_key='interior_geom')
     text = '''
 union() {
-\timport("%(body)s");
+\timport("%(obj)s");
 %(comps)s}
 ''' % {
-    'body':body,
+    'obj':obj,
     'comps':comps,
   }
   if script is CHECK_INTERSECT_SCRIPT:
@@ -203,13 +255,14 @@ def addPathsToDict(components):
 
 def main(obj):
   print obj
-  #components = identifyComponents(body)
-  #checkSize(components, body)
+  components = identifyComponents(obj)
+  print components
+  #checkSize(components, obj)
   #checkIntersections(components)
-  #shell(body)
-  #substitute_components(body,components)
-  #bosses(body)
-  #partingLine(components, body)
+  #shell(obj)
+  #substitute_components(obj,components)
+  #bosses(obj)
+  #partingLine(components, obj)
   print 'done!'
 
 if __name__ == '__main__':

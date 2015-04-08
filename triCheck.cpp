@@ -1,4 +1,3 @@
-
 #include <vector>
 #include <iostream>
 #include <sstream>
@@ -127,7 +126,8 @@ void read_line(istream& stream, vector<Vector> * vertices, vector<Vector> *three
 		while (ss >> buf) {
 			tokens.push_back(buf); //tokens[0] = mtllib, tokens[1] = xxx.mtl
 		}
-		ifstream mtlFile(tokens[1]);
+		string path = "obj/" + tokens[1];
+		ifstream mtlFile(path);
 		int ind = 1;
 		if (mtlFile.is_open()) {
 			while (mtlFile.good()) {
@@ -187,7 +187,8 @@ void read_line(istream& stream, vector<Vector> * vertices, vector<Vector> *three
 
 //calls everything else if obj file is valid.
 void triCheck(char * filename, vector<Vector> * vertices, vector<Vector> * three_d_v, vector<Triangle> * triangles, vector<Triangle> * three_d_tri, char * jpg_filename, map<string, string> * materials){
-	ifstream objFile(filename);
+	string path = "obj/" + string(filename);
+	ifstream objFile(path);
 	if (objFile.is_open()) {
 		while (objFile.good()) {
 			read_line(objFile, vertices, three_d_v, triangles, three_d_tri, jpg_filename, materials);
@@ -252,23 +253,16 @@ int main(int argc, char *argv[]) {
 			right3d = three_d_tri[i];
 		}
 	}
+	//Just uses center normal
 	/*cout << "Left triangle: " << left << endl;
 	cout << "3D triangle: " << left3d << endl;*/
 	tuple<Vector, Vector> cn_l = centroid(left3d);
-	cout << "Left centroid: " << get<0>(cn_l) << endl;
-	cout << "Left normal: " << get<1>(cn_l) << endl;
-
-	/*cout << "Center triangle: " << center << endl;
-	cout << "3D triangle: " << center3d << endl;*/
+	cout << "Left " << get<0>(cn_l);
 	tuple<Vector, Vector> cn_c = centroid(center3d);
-	cout << "Center centroid: " << get<0>(cn_c) << endl;
-	cout << "Center normal: " << get<1>(cn_c) << endl;
-
-	/*cout << "Right triangle: " << right << endl;
-	cout << "3D triangle: " << right3d << endl;*/
+	cout << "Center " << get<0>(cn_c);
 	tuple<Vector, Vector> cn_r = centroid(right3d);
-	cout << "Right centroid: " << get<0>(cn_r) << endl;
-	cout << "Right normal: " << get<1>(cn_r) << endl;
+	cout << "Right " << get<0>(cn_r);
+	cout << "Normal " << get<1>(cn_c);
 
 	return 0;
  }
