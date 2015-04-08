@@ -59,7 +59,7 @@ def extractComponentInfo(location=TRANSFORM_OUTPUT): #currently not in use - del
   return info
 
 def extractSIFTComponentInfo(location=SIFT_OUTPUT):
-  centroid_locations = [] 
+  centroid_locations = []
   with open(location) as f:
     for l in f:
       name, val = l.split()
@@ -68,7 +68,7 @@ def extractSIFTComponentInfo(location=SIFT_OUTPUT):
       elif name == 'filename':
         sticker_dict[name] = val
       elif name == 'left' or name == 'center':
-        sticker_dict[name] = eval(val)        
+        sticker_dict[name] = eval(val)
       elif name == 'right':
         #this assumes right is the last thing we see
         sticker_dict[name] = eval(val)
@@ -97,13 +97,13 @@ def identifyComponents(obj):
       elif tag == 'left':
         left_u, left_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
       elif tag == 'center':
-        center_u, center_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1]) 
+        center_u, center_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
       elif tag == 'right':
         right_u, right_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
     args.extend((correct_jpg, left_u, left_v, center_u, center_v, right_u, right_v))
     callCpp(tag_dictionary, args)
   #now dictionary modified with threed_etc additions
-  for tag_dictionary in comp_list:  
+  for tag_dictionary in comp_list:
     for component in tag_dictionary.keys():
       comp = tag_dictionary[component]
       #call getAlignmentInfo here!
