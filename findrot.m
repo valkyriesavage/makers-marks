@@ -55,5 +55,5 @@ axis_rot
 fileID = fopen('transform.txt','w+');
 fprintf(fileID,'coords [%.4f,%.4f,%.4f]\n',translation);
 fprintf(fileID,'rotations [%.4f,%.4f,%.4f]\n',rotation);
-fprintf(fileID,'axis [%.4f,%.4f,%.4f]\n',rotation);
+fprintf(fileID,'axis [0,0,%.4f]\n',axis_rot);
 fclose(fileID);
