@@ -103,26 +103,27 @@ def identifyComponents(obj):
     args.extend((correct_jpg, left_u, left_v, center_u, center_v, right_u, right_v))
     callCpp(tag_dictionary, args)
   #now dictionary modified with threed_etc additions
-  for tag_dictionary in comp_list:
-    for component in tag_dictionary.keys():
-      comp = tag_dictionary[component]
-      #call getAlignmentInfo here!
-      #tag_dictionary[component] = getAlignmentInfo(comp) #reassigning the value
-    return comp_list
+  for idx, comp in enumerate(comp_list):
+    comp_list[idx] = getAlignmentInfo(comp) #reassigning the value
+  return comp_list
 
 def callCpp(tag_dictionary, args):
   #args = ['./triCheck', 'filename', 'lu', 'lv', 'cu', 'cv', 'ru', 'rv']
+  print args
   proc = subprocess.Popen(args, stdout=subprocess.PIPE)
   for line in proc.stdout:
-    name, value = line.split()
-    if name == 'Left':
-      tag_dictionary['threed_top_left'] = eval(value)
-    elif name == 'Center':
-      tag_dictionary['threed_center'] = eval(value)
-    elif name == 'Right':
-      tag_dictionary['threed_top_right'] = eval(value)
-    elif name == 'Normal':
-      tag_dictionary['threed_normal'] = eval(value)
+    if len(line.split()) == 2:
+      name, value = line.split()
+      if name == 'Left':
+        tag_dictionary['threed_top_left'] = eval(value)
+      elif name == 'Center':
+        tag_dictionary['threed_center'] = eval(value)
+      elif name == 'Right':
+        tag_dictionary['threed_top_right'] = eval(value)
+      elif name == 'Normal':
+        tag_dictionary['threed_normal'] = eval(value)
+    else:
+      print line.split(), ' --  something wrong here'
 
 ''' OpenSCAD location and scripts '''
 OPENSCAD = '/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD'
@@ -160,7 +161,7 @@ translate(%(coords)s) {
 '''
   return output % component
 
-def writeOpenSCAD(script, components, obj='', debug=False):
+def writeOpenSCAD(script, components, object_body='', debug=False):
   text = ''
   if script is CHECK_SIZE_SCRIPT:
     comps = ''
@@ -171,7 +172,7 @@ union() {
 \timport("%(obj)s");
 %(comps)s}
 ''' % {
-    'obj':obj,
+    'obj':object_body,
     'comps':comps,
   }
   if script is CHECK_INTERSECT_SCRIPT:
@@ -204,6 +205,13 @@ def isEmptySTL(fname=SCRATCH):
         return False
   return True
 
+def checkSize(components):
+  # ensure that the components all will fit in the body
+  union_script = CHECK_SIZE_SCRIPT
+  unioned_file = SCRATCH
+  writeOpenSCAD(union_script, components, object_body='obj/controller.stl') #TODO FIXME HFS
+  callOpenSCAD(union_script, unioned_file)
+
 def checkIntersections(components):
   # check if any component intersects any other component
   intersection_script = CHECK_INTERSECT_SCRIPT
@@ -213,7 +221,7 @@ def checkIntersections(components):
       if c1 == c2:
         continue
       writeOpenSCAD(intersection_script, [c1,c2])
-      callOpenSCAD(intersection_script, intersection_script)
+      callOpenSCAD(intersection_script, intersection_file)
       if not isEmptySTL(intersection_file):
         raise Exception('%(c1)s (%(c1l)s) and %(c2)s (%(c2l)s) intersect!' %
                           {
@@ -226,7 +234,7 @@ def checkIntersections(components):
 
 ''' Meshlab location and scripts '''
 MESHLAB = '/Applications/meshlab.app/Contents/MacOS/meshlabserver'
-SHELL_SCRIPT = os.path.join(os.getcwd(), 'shell.mlx')
+SHELL_SCRIPT = os.path.join(os.getcwd(), 'deflate.mlx')
 
 '''
 We will give the following to this part of the pipeline:
