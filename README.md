@@ -2,12 +2,20 @@
 
 things to remember: 
 
-have a startup.m in this root directory (git ignore it) containing run(directory of VL), eg
+  * there is a file being ignored by the repo that you MUST HAVE:
 
-  run('/Users/valkyrie/libraries/vlfeat-0.9.20/toolbox/vl_setup')
+      ROOT/startup.m
 
-if the ./triCheck executable doesnt work, compile the .cpp with g++ -std=c++11  -o triCheck triCheck.cpp
+    should contain the following line:
 
-tags to be checked should be .jpgs in the /tags folder in the home directory
+      run('/Users/valkyrie/libraries/vlfeat-0.9.20/toolbox/vl_setup')
 
-obj file and its associated texture .jpgs and .mtl should be in the /obj folder in the home directory
+    (with appropriate path - download vlfeat from http://www.vlfeat.org/install-matlab.html)
+
+  * if the ./triCheck executable doesnt work, compile the .cpp with g++ -std=c++11  -o triCheck triCheck.cpp
+
+  * tags to be checked should be .jpgs in the /tags folder in the home directory. tags need to be in RGB color space, rather than CMYK
+
+  * obj file and its associated texture .jpgs and .mtl should be in the /obj folder in the home directory
+Notes on installing this!
+
