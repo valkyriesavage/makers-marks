@@ -17,7 +17,9 @@ class Component(Enum):
   handle = 12
   hasp = 13
 
-  no_offset = [hinge,knob,handle,hasp,parting_line]
+  @classmethod
+  def no_offset(cls):
+    return [cls.hinge,cls.knob,cls.handle,cls.hasp,cls.parting_line]
 
   @classmethod
   def getCompType(cls, tinystr):
@@ -35,23 +37,7 @@ class Component(Enum):
 
   @classmethod
   def toStr(cls, comptype):
-    strz = {
-      cls.button: 'button',
-      cls.joystick: 'joystick',
-      cls.speaker: 'speaker',
-      cls.main_board: 'main_board',
-      cls.hinge: 'hinge',
-      cls.parting_line: 'parting_line',
-      cls.screen: 'screen',
-      cls.LED_ring: 'LED_ring',
-      cls.potentiometer: 'potentiometer',
-      cls.light_sensor: 'light_sensor',
-      cls.gyro: 'gyro',
-      cls.knob: 'knob',
-      cls.handle: 'handle',
-      cls.hasp: 'hasp'
-    }
-    return strz[comptype]
+    return comptype.name
 
 ''' Matlab location and scripts '''
 MATLAB = ''
@@ -217,24 +203,43 @@ def placeCompOpenSCAD(component, geom):
 translate(%(coords)s) {
   rotate(%(rotations)s) {
     rotate(%(axis)s) {
-      import("stls/'''+Component.toStr(component['type'])+'_'+geom+'''.stl");
+      import("stls/'''+Component.toStr(component['type'])+'-'+geom+'''.stl");
     }
   }
 }
 '''
   return output % component
 
-def writeOpenSCAD(script, components={}, object_body='', deflated='', debug=False):
+def internalOnly(geometry, body):
+  return '''
+intersection() {
+  '''+geometry+'\n'+'''
+  import("'''+body+'''");
+}
+'''
+
+def writeOpenSCAD(script, components={}, object_body='', deflated='',
+                  full_body='', top='', debug=False):
   text = ''
-  if script is CHECK_INTERSECT_SCRIPT:
+  if script is CHECK_INTERSECT_SCRIPT and object_body == '':
     text = '''
 intersection() {
-  %(comp_0)
-  %(comp_1)
+  %(comp_0)s
+  %(comp_1)s
 }
 ''' % {
-    'comp_0':placeCompOpenSCAD(components[0], geom_key='clearance'),
-    'comp_1':placeCompOpenSCAD(components[1], geom_key='clearance'),
+    'comp_0':placeCompOpenSCAD(components[0], geom='clearance'),
+    'comp_1':placeCompOpenSCAD(components[1], geom='clearance'),
+  }
+  if script is CHECK_INTERSECT_SCRIPT and not object_body == '':
+    text = '''
+intersection() {
+  %(comp_0)s
+  import("%(obj)s");
+}
+''' % {
+    'comp_0':placeCompOpenSCAD(components[0], geom='clearance'),
+    'obj':object_body
   }
   if script is SUB_COMPONENT_SCRIPT:
     comps_sub = ''
@@ -243,15 +248,16 @@ intersection() {
       if component['type'] == Component.parting_line:
         # these will be dealt with in a special step later
         continue
-      comps_sub += placeCompOpenSCAD(component, geom_key='sub')
-      comps_add += placeCompOpenSCAD(component, geom_key='add')
+      comps_sub += placeCompOpenSCAD(component, geom='sub')
+      comps_add += internalOnly(placeCompOpenSCAD(component, geom='add'),
+                                full_body)
     text = '''
 difference() {
 \timport("%(obj)s");
 // first we need to subtract everything
 \t%(comps_sub)s
 }
-// now we add mounting points back in
+// now we add mounting points back in (they are cut to size of the body)
 %(comps_add)s
 ''' % {
     'obj':object_body,
@@ -259,7 +265,30 @@ difference() {
     'comps_add':comps_add,
   }
   if script is PART_SCRIPT:
-    text = "# Sean, fill me in!"
+    for comp in components:
+      if component['type'] == Component.parting_line:
+        pline = placeCompOpenSCAD(component, geom='woo')
+        break
+    if pline == '':
+      print 'wtf? no parting line?'
+    if top == True:
+      text = '''
+difference(){
+\timport("%(obj)s");
+\t%(pline)s
+''' % {
+    'obj':object_body,
+    'pline':parting_line,
+    }
+    if top == False:
+      text = '''
+intersection(){
+\timport("%(obj)s");
+\t%(pline)s
+''' % {
+    'obj':object_body,
+    'pline':parting_line,
+    }
   if script is BOSS_SCRIPT:
     text = "# Sean, fill me in!"
   if script is SHELL_SCRIPT:
@@ -296,22 +325,24 @@ def determineFitOffset(components, obj):
   # figure out how far back we need to set each component to make it
   # not intersect the body of the object.
   for comp in components:
-    #if comp['type'] in Component.no_offset:
-    #  continue
+    if comp['type'] in Component.no_offset():
+      continue
     loc = comp['coords']
     normal = comp['threed_normal']
     ct = 0
+    print 'original:', loc
     while True:
       mod_comp = dict(comp)
-      mod_comp[coords] = [c_i - n_i for c_i, n_i in zip(loc, normal)]
-      print mod_comp[coords]
-      writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp,obj])
+      mod_comp['coords'] = [c_i - n_i for c_i, n_i in zip(loc, normal)]
+      writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=obj)
       callOpenSCAD(CHECK_INTERSECT_SCRIPT, SCRATCH)
-      if isEmptySTL(SCRATCH) or ct > 3:
+      if isEmptySTL(SCRATCH) or ct > 50:
+        # in this case... wtf???
         break
-      loc = mod_comp[coords]
+      loc = mod_comp['coords']
       ct += 1
     comp['coords'] = loc
+    print 'new:', loc
   return components
 
 def checkIntersections(components):
@@ -332,8 +363,8 @@ def checkIntersections(components):
                             }
                        )
 
-def substitute_components(components, stl):
-  writeOpenSCAD(SUB_COMPONENT_SCRIPT, components, object_body=stl)
+def substitute_components(components, stl, full):
+  writeOpenSCAD(SUB_COMPONENT_SCRIPT, components, object_body=stl, full_body=full)
   oname = stl.replace('.stl','-compsubbed.stl')
   callOpenSCAD(SUB_COMPONENT_SCRIPT, oname)
   return oname
@@ -342,22 +373,28 @@ def bosses(components, stl):
   return stl
 
 def partingLine(components, stl):
-  # TODO valkyrie: need to actually make two scripts: gotta get parts
-  #                A and B out of this thing.  sigh.
-  writeOpenSCAD(PART_SCRIPT, components, object_body=stl)
-  return (0,0)
+  o_top = stl.replace('.stl', '-top.stl')
+  o_bot = stl.replace('.stl', '-bot.stl')
+  writeOpenSCAD(PART_SCRIPT, components, object_body=stl, top=True)
+  callOpenSCAD(PART_SCRIPT, o_top)
+  writeOpenSCAD(PART_SCRIPT, components, object_body=stl, top=False)
+  callOpenSCAD(PART_SCRIPT, o_bot)
+  return (o_top,o_bot)
 
 ''' main function '''
 
 def main(obj):
   print obj
   stl = 'obj/'+obj.replace('.obj','.stl')
+  full = stl
   components = identifyComponents(obj)
   print components
   stl = shell(stl)
+  shelled = stl
   components = determineFitOffset(components)
+  print components
   checkIntersections(components)
-  stl = substitute_components(components, stl)
+  stl = substitute_components(components, stl, full)
   stl = bosses(stl)
   side1, side2 = partingLine(components, stl)
   print 'done!'
