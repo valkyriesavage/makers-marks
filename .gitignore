@@ -12,7 +12,6 @@ transform.txt
 sift.txt
 setup.m
 startup.m
-<<<<<<< HEAD
 rot/
 sift.txt
 gboxobj/
@@ -21,7 +20,7 @@ cobj/
 gboxtags/
 tags/
 obj/
-=======
 paper/
 video/
->>>>>>> origin/master
+MYobj/
+MYtags/
