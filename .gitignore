@@ -5,9 +5,14 @@ scratch.stl
 checksize.scad
 checkintersect.scad
 partboss.scad
+shell.scad
+part.scad
+subcomps.scad
 transform.txt
+sift.txt
 setup.m
 startup.m
+<<<<<<< HEAD
 rot/
 sift.txt
 gboxobj/
@@ -16,3 +21,7 @@ cobj/
 gboxtags/
 tags/
 obj/
+=======
+paper/
+video/
+>>>>>>> origin/master
