@@ -17,5 +17,7 @@ things to remember:
   * tags to be checked should be .jpgs in the /tags folder in the home directory. tags need to be in RGB color space, rather than CMYK
 
   * obj file and its associated texture .jpgs and .mtl should be in the /obj folder in the home directory
+ 
+  * sudo pip install enum34 if python says enum isn't found
 Notes on installing this!
 
