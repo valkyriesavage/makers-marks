@@ -22,6 +22,22 @@ class Component(Enum):
     return [cls.hinge,cls.knob,cls.handle,cls.hasp,cls.parting_line]
 
   @classmethod
+  def part(cls, comptype):
+    part_at = [cls.hinge,cls.parting_line]
+    for partable in part_at:
+      if comptype is partable:
+        return True
+    return False
+
+  @classmethod
+  def no_offset(cls, comptype):
+    non_offset = [cls.hinge,cls.knob,cls.handle,cls.hasp,cls.parting_line]
+    for non_offsettable in non_offset:
+      if comptype is non_offsetable:
+        return True
+    return False
+
+  @classmethod
   def getCompType(cls, tinystr):
     match_dict = {
       'b':cls.button,
@@ -265,9 +281,10 @@ difference() {
     'comps_add':comps_add,
   }
   if script is PART_SCRIPT:
+    pline = 'cube(1);'
     for comp in components:
-      if component['type'] == Component.parting_line:
-        pline = placeCompOpenSCAD(component, geom='woo')
+      if Component.part(comp['type']):
+        pline = placeCompOpenSCAD(comp, geom='woo')
         break
     if pline == '':
       print 'wtf? no parting line?'
@@ -276,18 +293,20 @@ difference() {
 difference(){
 \timport("%(obj)s");
 \t%(pline)s
+}
 ''' % {
     'obj':object_body,
-    'pline':parting_line,
+    'pline':pline,
     }
     if top == False:
       text = '''
 intersection(){
 \timport("%(obj)s");
 \t%(pline)s
+}
 ''' % {
     'obj':object_body,
-    'pline':parting_line,
+    'pline':pline,
     }
   if script is BOSS_SCRIPT:
     text = "# Sean, fill me in!"
@@ -333,11 +352,11 @@ def determineFitOffset(components, obj):
     print 'original:', loc
     while True:
       mod_comp = dict(comp)
-      mod_comp['coords'] = [c_i - n_i for c_i, n_i in zip(loc, normal)]
+      mod_comp['coords'] = [c_i - n_i*.5 for c_i, n_i in zip(loc, normal)]
       writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=obj)
       callOpenSCAD(CHECK_INTERSECT_SCRIPT, SCRATCH)
       if isEmptySTL(SCRATCH) or ct > 50:
-        # in this case... wtf???
+        # in the > 50 case... wtf???
         break
       loc = mod_comp['coords']
       ct += 1
