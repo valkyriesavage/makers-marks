@@ -5,6 +5,9 @@ scratch.stl
 checksize.scad
 checkintersect.scad
 partboss.scad
+shell.scad
 transform.txt
 setup.m
 startup.m
+paper/
+video/
