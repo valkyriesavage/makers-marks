@@ -8,3 +8,11 @@ partboss.scad
 transform.txt
 setup.m
 startup.m
+rot/
+sift.txt
+gboxobj/
+ctags/
+cobj/
+gboxtags/
+tags/
+obj/

@@ -17,47 +17,69 @@ using namespace std;
 // Arguments: obj jpg lu lv cu cv ru rv
 // ***********************************
 bool correct_jpg = false;
+string curr_jpg = "";
 
 class Triangle {
 public:
 	Vector a;
 	Vector b;
 	Vector c;
-	void Set(Vector pa, Vector pb, Vector pc){a=pa, b=pb, c=pc;}
+	string jpg;
+	void Set(Vector pa, Vector pb, Vector pc, string trijpg){a=pa, b=pb, c=pc, jpg=trijpg;}
 };
 
 std::ostream& operator<< (std::ostream &out, Triangle &triangle)
 {
     out << "Triangle: (" << triangle.a << ", " <<
         triangle.b<< ", " <<
-        triangle.c << ")\n";
+        triangle.c << ") " <<
+		"with jpg " << triangle.jpg << endl;
     return out;
 }
 
-//Checks if p1 and p2 are in the same side of a triangle.
-bool sameSide(Vector p1, Vector p2, Vector ta, Vector tb) {
-	Vector cp1 = (tb - ta).cross(p1 - ta);
-	Vector cp2 = (tb - ta).cross(p2 - ta);
-	if (cp1.dot(cp2) >= 0)
-		return true;
-	return false;
+
+//gets the signed area of a triangle
+float triArea(Triangle tri) {
+	Vector p0 = tri.a;
+	Vector p1 = tri.b;
+	Vector p2 = tri.c;
+	float area = 1/2 * (-p1.y*p2.x + p0.y*(-p1.x + p2.x) + p0.x*(p1.y - p2.y) + p1.x*p2.y); 
+	return area;
 }
 
 //Returns T/F if a point is in a triangle.
-bool pointInTriangle(Vector point, Triangle tri) {
+// bool pointInTriangle(Vector point, Triangle tri) {
+// 	Vector p0 = tri.a;
+// 	Vector p1 = tri.b;
+// 	Vector p2 = tri.c;
+// 	float area = triArea(tri);
+// 	//if ((p0.x == p1.x && p1.x == p2.x && p2.x == p0.x) || (p0.y == p1.y && p1.y == p2.y && p2.y == p0.y) || (p0.x == p1.x && p0.y == p1.y) || (p1.x == p2.x && p1.y == p2.y) || (p0.x == p2.x && p0.y == p2.y))
+// //		return false;
+// 	float s = 1/(2*area)*(p0.y * p2.x - p0.x * p2.y + point.x * (p2.y - p0.y) + point.y * (p0.x - p2.x));
+// 	float t = 1/(2*area)*(p0.x * p1.y - p0.y * p1.x + point.x * (p0.y - p1.y) + point.y * (p1.x - p0.x));	
+// 	if (s > 0 && t > 0 && 1 - s - t > 0)
+// 		return true;
+// 	return false;
+// }
+
+
+bool pointInTriangle(Vector s, Triangle tri) {
 	Vector a = tri.a;
 	Vector b = tri.b;
 	Vector c = tri.c;
-	//line
-	if (a.x == b.x && b.x == c.x && c.x == a.x)
-		return false;
-	if (a.y == b.y && b.y == c.y && c.y == a.y) {
-		return false;			
-	}
-	if (sameSide(point, a, b, c) && sameSide(point, b, a, c) && sameSide(point, c, a, b))
-		return true;
-	return false;
+
+	float as_x = s.x-a.x;
+    float as_y = s.y-a.y;
+
+    bool s_ab = (b.x-a.x)*as_y-(b.y-a.y)*as_x > 0;
+
+    if((c.x-a.x)*as_y-(c.y-a.y)*as_x > 0 == s_ab) return false;
+
+    if((c.x-b.x)*(s.y-b.y)-(c.y-b.y)*(s.x-b.x) > 0 != s_ab) return false;
+
+    return true;
 }
+
 
 //Reads the .MTL file for jpg discrimination. 
 void read_mtl(istream& stream, map<string, string> * materials) {
@@ -150,13 +172,18 @@ void read_line(istream& stream, vector<Vector> * vertices, vector<Vector> *three
 		string value = it->second;
 		//I can't believe I still need to convert this...
 		const char *v = value.c_str();	
+		//NEW THINGS
+		curr_jpg = value;
+		//cout << "VALUE IS " << value << endl;
 		if (strcmp(v, jpg_filename) == 0) {
 			correct_jpg = true;
+			//cout << "Comparing with " << v << endl;
 		}
 		else {
 			correct_jpg = false;
 		}
 	}
+	//else if (strncmp(l, "f ", 2) == 0) {
 	else if (correct_jpg && strncmp(l, "f ", 2) == 0) {
 		string buf;
 		stringstream ss(line);
@@ -176,8 +203,9 @@ void read_line(istream& stream, vector<Vector> * vertices, vector<Vector> *three
 			//find vertices, add them to objects
 			Triangle tri;
 			Triangle three_dt;
-			tri.Set((*vertices)[v1i], (*vertices)[v2i], (*vertices)[v3i]);
-			three_dt.Set((*three_d_v)[v1i], (*three_d_v)[v2i], (*three_d_v)[v3i]);
+			//cout << "FACE HAS JPG " << curr_jpg << endl;
+			tri.Set((*vertices)[v1i], (*vertices)[v2i], (*vertices)[v3i], curr_jpg);
+			three_dt.Set((*three_d_v)[v1i], (*three_d_v)[v2i], (*three_d_v)[v3i], curr_jpg);
 			triangles->push_back(tri);
 			three_d_tri->push_back(three_dt);
 		}
@@ -237,20 +265,26 @@ int main(int argc, char *argv[]) {
 	Triangle center3d;
 	Triangle right;
 	Triangle right3d;
-
+	//cout << "FOUND " << triangles.size() << " TRIANGLES" << endl;
 	//This assumes there is only 1 triangle that works.
 	for (int i = 0; i < triangles.size(); i++) {
 		if (pointInTriangle(left_point, triangles[i])){
 			left = triangles[i];
 			left3d = three_d_tri[i];
+			//cout << "IN LEFT IS " << left << endl;
+
 		}
 		else if (pointInTriangle(center_point, triangles[i])){
 			center = triangles[i];
 			center3d = three_d_tri[i];
+			//cout << "IN CENTER IS " << center << endl;
+
 		}
 		else if (pointInTriangle(right_point, triangles[i])){
 			right = triangles[i];
 			right3d = three_d_tri[i];
+			//cout << "IN RIGHT IS " << right << endl;
+
 		}
 	}
 	//Just uses center normal
