@@ -67,12 +67,13 @@ function [filename, lu, lv, cu, cv, ru, rv, inliers] = tag_detection(tagphoto, c
     cv = 1 - cy / iy;
     ru = rx / ix;
     rv = 1 - ry / iy;
-    if lu > 1 %sometimes this happens because bad skew mapping of parting lines
-        lu = 1
-    if ru > 1
-        ru = 1
-    end
     filename = comparisonphoto;
     inliers = total_inliers;
-    
+    if lu > 1 %sometimes this happens because bad skew mapping of parting lines
+        lu = 1;
+    end
+    if ru > 1
+        ru = 1;
+    end
+        
 end

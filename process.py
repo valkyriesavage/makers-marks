@@ -156,7 +156,7 @@ def getAlignmentInfo(component):
   return component
 
 def identifyComponents(obj):
-  #callMatlab(SIFT_DETECT_SCRIPT)
+  callMatlab(SIFT_DETECT_SCRIPT)
   comp_list = extractSIFTComponentInfo(SIFT_OUTPUT)
   final_list = []
   #now call c++... THIS CODE IS REALLY BAD!!! SORRY!!!!!!
