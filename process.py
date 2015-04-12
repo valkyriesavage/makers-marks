@@ -18,10 +18,11 @@ class Component(Enum):
   hasp = 13
   servo_mount = 14
   servo_move = 15
+  boss = 16
 
   @classmethod
   def no_offset(cls):
-    return [cls.hinge,cls.knob,cls.handle,cls.hasp,cls.parting_line]
+    return [cls.hinge,cls.knob,cls.handle,cls.hasp,cls.parting_line,cls.boss]
 
   @classmethod
   def part(cls, comptype):
@@ -42,6 +43,7 @@ class Component(Enum):
       'd':cls.light_sensor,
       'h':cls.hinge,
       'l':cls.parting_line,
+      'led':cls.LED_ring,
       'r':cls.parting_line,
       'knob':cls.knob,
       'screen':cls.screen,
@@ -232,7 +234,8 @@ OPENSCAD = '/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD'
 CHECK_INTERSECT_SCRIPT = os.path.join(os.getcwd(), 'checkintersect.scad')
 SUB_COMPONENT_SCRIPT = os.path.join(os.getcwd(), 'subcomps.scad')
 PART_SCRIPT = os.path.join(os.getcwd(), 'part.scad')
-BOSS_SCRIPT = os.path.join(os.getcwd(), 'boss.scad')
+BOSS_CHECK_COMPS_SCRIPT = os.path.join(os.getcwd(), 'bosscheckcomps.scad')
+BOSS_PUT_SCRIPT = os.path.join(os.getcwd(), 'bossput.scad')
 SHELL_SCRIPT = os.path.join(os.getcwd(), 'shell.scad')
 SCRATCH = os.path.join(os.getcwd(),'scratch.stl')
 
@@ -274,9 +277,10 @@ intersection() {
 '''
 
 def writeOpenSCAD(script, components={}, object_body='', deflated='',
-                  full_body='', top='', debug=False):
+                  full_body='', top='', boss=None, bosses=[], debug=False):
   text = ''
-  if script is CHECK_INTERSECT_SCRIPT and object_body == '':
+
+  if script == CHECK_INTERSECT_SCRIPT and object_body == '':
     text = '''
 intersection() {
   %(comp_0)s
@@ -286,7 +290,7 @@ intersection() {
     'comp_0':placeCompOpenSCAD(components[0], geom='clearance'),
     'comp_1':placeCompOpenSCAD(components[1], geom='clearance'),
   }
-  if script is CHECK_INTERSECT_SCRIPT and not object_body == '':
+  if script == CHECK_INTERSECT_SCRIPT and not object_body == '':
     text = '''
 intersection() {
   %(comp_0)s
@@ -296,7 +300,8 @@ intersection() {
     'comp_0':placeCompOpenSCAD(components[0], geom='clearance'),
     'obj':object_body
   }
-  if script is SUB_COMPONENT_SCRIPT:
+
+  if script == SUB_COMPONENT_SCRIPT:
     comps_sub = ''
     comps_add = ''
     for component in components:
@@ -319,7 +324,8 @@ difference() {
     'comps_sub':comps_sub,
     'comps_add':comps_add,
   }
-  if script is PART_SCRIPT:
+
+  if script == PART_SCRIPT:
     pline = 'cube(1);'
     for comp in components:
       if Component.part(comp['type']):
@@ -347,9 +353,57 @@ intersection(){
     'obj':object_body,
     'pline':pline,
     }
-  if script is BOSS_SCRIPT:
-    text = "# Sean, fill me in!"
-  if script is SHELL_SCRIPT:
+
+  if script == BOSS_CHECK_COMPS_SCRIPT:
+    all_comp_union = 'union(){'
+    for comp in components:
+      placecomp = placeCompOpenSCAD(comp, geom='clearance')
+      all_comp_union += (placecomp)
+    all_comp_union += '}'
+    text = '''
+intersection() {
+\t%(boss)s
+\t%(comps)s
+}
+''' % {
+      'boss':placeCompOpenSCAD(boss,'add'),
+      'comps':all_comp_union,
+    }
+
+  if script == BOSS_PUT_SCRIPT:
+    bosses_add = ''
+    bosses_sub = ''
+    for boss in bosses:
+      bosses_add += placeCompOpenSCAD(boss,'add')
+      bosses_sub += placeCompOpenSCAD(boss,'sub')
+    text = '''
+difference() {
+  // add together bosses and hollowed body
+  union() {
+    // make sure we only take boss parts inside the body
+    intersection() {
+      union() {
+        %(bosses_add)s
+      }
+      import("%(full)s");
+    }
+    // ok, here is the hollowed body
+    import("%(obj)s");
+  }
+
+  // now here is the part we subtract: all the boss middles
+  union() {
+    %(bosses_sub)s
+  }
+}
+''' % {
+      'bosses_add':bosses_add,
+      'bosses_sub':bosses_sub,
+      'full':full_body,
+      'obj':object_body,
+    }
+
+  if script == SHELL_SCRIPT:
     text = '''
 difference() {
   import("%(obj)s");
@@ -359,6 +413,7 @@ difference() {
       'obj':object_body,
       'deflated':deflated
     }
+
   if debug:
     print text
   else:
@@ -427,8 +482,53 @@ def substitute_components(components, stl, full):
   callOpenSCAD(SUB_COMPONENT_SCRIPT, oname)
   return oname
 
-def bosses(components, stl):
-  return stl
+def bosses(components, stl, full):
+  # some things that will be important:
+  boss_rotations = []
+  boss_base = []
+  for component in components:
+    if Component.part(component['type']):
+      boss_rotations = list(component['rotations'])
+      boss_base = list(component['coords'])
+      boss_move = list(component['threed_normal'])
+      print boss_rotations
+      # now to rotate: we actually want to have bosses that are ORTHOGONAL to
+      # our parting line: otherwise they will not be very useful...
+      if component['type'] is Component.hinge:
+        # in this case, the component itself is correctly oriented.
+        pass
+      else:
+        # if we are talking about the parting line stickers, then we rotate
+        boss_rotations[1] += 90 # TODO: debug this line... heh.
+      print boss_rotations
+      break
+  if len(boss_rotations) == 0:
+    # no parting line => no bosses
+    return stl
+  # first order of business, which bosses are good?
+  good_bosses = []
+  grid_spacing = 30
+  min_coords = -150
+  max_coords = -min_coords
+  field_x = range(min_coords,max_coords,grid_spacing)
+  field_y = range(min_coords,max_coords,grid_spacing)
+  for x in field_x:
+    for y in field_y:
+      potential_boss = {
+        'type':Component.boss,
+        'coords':[boss_base[0]+x*boss_move[0],boss_base[1]+y*boss_move[1],boss_base[2]],
+        'axis':0,
+        'rotations':boss_rotations,
+      }
+      writeOpenSCAD(BOSS_CHECK_COMPS_SCRIPT,components, boss=potential_boss)
+      callOpenSCAD(BOSS_CHECK_COMPS_SCRIPT,SCRATCH)
+      if isEmptySTL(SCRATCH):
+        good_bosses.append(potential_boss)
+  # and now that we have some good bosses... we just put 'em in.  obviously.
+  bossed_stl = stl.replace('.stl','-bossed.stl')
+  writeOpenSCAD(BOSS_PUT_SCRIPT,bosses=good_bosses,object_body=stl,full_body=full)
+  callOpenSCAD(BOSS_PUT_SCRIPT,bossed_stl)
+  return bossed_stl
 
 def partingLine(components, stl):
   o_top = stl.replace('.stl', '-top.stl')
@@ -452,8 +552,8 @@ def main(obj):
   components = determineFitOffset(components, shelled)
   print components
   checkIntersections(components)
+  stl = bosses(components, stl, full)
   stl = substitute_components(components, shelled, full)
-  stl = bosses(components, stl)
   side1, side2 = partingLine(components, stl)
   print 'done!'
 
