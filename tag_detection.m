@@ -75,5 +75,11 @@ function [filename, lu, lv, cu, cv, ru, rv, inliers] = tag_detection(tagphoto, c
     if ru > 1
         ru = 1;
     end
+    if lu < 0
+        lu = 0;
+    end
+    if ru < 0 %this should never happen...
+        ru = 0;
+    end
         
 end

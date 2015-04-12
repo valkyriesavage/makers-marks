@@ -145,6 +145,7 @@ def extractSIFTComponentInfo(location=SIFT_OUTPUT):
         #this assumes right is the last thing we see
         sticker_dict[name] = eval(val)
         cur_list.append(sticker_dict.copy())
+  centroid_locations.append(cur_list)      
   return centroid_locations
 
 def getAlignmentInfo(component):
@@ -156,10 +157,12 @@ def getAlignmentInfo(component):
   return component
 
 def identifyComponents(obj):
-  callMatlab(SIFT_DETECT_SCRIPT)
+  #callMatlab(SIFT_DETECT_SCRIPT)
   comp_list = extractSIFTComponentInfo(SIFT_OUTPUT)
+  # print "COMP LIST IS "
+  # print comp_list
   final_list = []
-  #now call c++... THIS CODE IS REALLY BAD!!! SORRY!!!!!!
+  #now call c++...this code could be cleaner 
   for list_of_tag_dics in comp_list:
     final_dict = {}
     final_dict['threed_center'] = [0,0,0]
@@ -186,8 +189,8 @@ def identifyComponents(obj):
       i += 1
     if final_dict['threed_center'] != [0,0,0]:
       final_list.append(final_dict)
-    for idx, comp in enumerate(final_list):
-      final_list[idx] = getAlignmentInfo(comp) #reassigning the value
+    #for idx, comp in enumerate(final_list):
+     # final_list[idx] = getAlignmentInfo(comp) #reassigning the value
   return final_list
 
 def callCppIntermediate(tag_dictionary, args):
