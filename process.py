@@ -450,7 +450,7 @@ def main(obj):
   print components
   checkIntersections(components)
   stl = substitute_components(components, shelled, full)
-  stl = bosses(stl)
+  stl = bosses(components, stl)
   side1, side2 = partingLine(components, stl)
   print 'done!'
 
