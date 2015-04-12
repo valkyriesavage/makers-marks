@@ -1,0 +1,6 @@
+sticker smount.jpg
+filename shark_T3.jpg
+inliers 24.500000
+left [0.545257,0.315260]
+center [0.524887,0.232123]
+right [0.562514,0.156216]
