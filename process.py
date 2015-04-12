@@ -164,7 +164,7 @@ def identifyComponents(obj):
     final_dict = {}
     final_dict['threed_center'] = [0,0,0]
     final_dict['threed_top_left'] = [0,0,0]
-    final_dict['threed_top_right'] = [0,0,0]        
+    final_dict['threed_top_right'] = [0,0,0]
     inlier_counts = [(td['inliers'],idx) for idx,td in enumerate(list_of_tag_dics)]
     inlier_counts = sorted(inlier_counts)
     inlier_counts.reverse()
@@ -190,8 +190,8 @@ def identifyComponents(obj):
       final_list[idx] = getAlignmentInfo(comp) #reassigning the value
   return final_list
 
-def callCppIntermediate(tag_dictionary, args): 
-  correct_jpg, left_u, left_v, center_u, center_v, right_u, right_v = '', '', '', '', '', '', ''  
+def callCppIntermediate(tag_dictionary, args):
+  correct_jpg, left_u, left_v, center_u, center_v, right_u, right_v = '', '', '', '', '', '', ''
   for tag in tag_dictionary.keys():
     if tag == 'filename':
       correct_jpg = tag_dictionary[tag]
@@ -444,14 +444,14 @@ def main(obj):
   full = stl
   components = identifyComponents(obj)
   print components
-  # stl = shell(stl)
-  # shelled = stl
-  # components = determineFitOffset(components)
-  # print components
-  # checkIntersections(components)
-  # stl = substitute_components(components, stl, full)
-  # stl = bosses(stl)
-  # side1, side2 = partingLine(components, stl)
+  stl = stl.replace('.stl','-shelled.stl')#shell(stl)
+  shelled = stl
+  components = determineFitOffset(components, shelled)
+  print components
+  checkIntersections(components)
+  stl = substitute_components(components, shelled, full)
+  stl = bosses(stl)
+  side1, side2 = partingLine(components, stl)
   print 'done!'
 
 if __name__ == '__main__':
