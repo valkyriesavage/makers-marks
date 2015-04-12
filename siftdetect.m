@@ -35,7 +35,7 @@ for sname = snames
             if strcmp(fext(2),'jpg')
                 [t_filename, t_lu, t_lv, t_cu, t_cv, t_ru, t_rv, inliers] = tag_detection(str, fstr);
                 curr_inliers = inliers;
-                if curr_inliers > 10 %remember all data stronger than 10
+                if curr_inliers > 6 %remember all data stronger than 6...ha
                     filename = t_filename;
     %{
                     lu = t_lu;
