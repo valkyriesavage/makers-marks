@@ -121,21 +121,30 @@ def extractComponentInfo(location=TRANSFORM_OUTPUT):
 
 def extractSIFTComponentInfo(location=SIFT_OUTPUT):
   centroid_locations = []
+  cur_sticker = ''
+  cur_list = []
   with open(location) as f:
     for l in f:
       name, val = l.split()
       if name == 'sticker':
+        if val != cur_sticker:
+          if cur_sticker != '':
+            centroid_locations.append(cur_list)
+          cur_sticker = val
+          cur_list = []
         comp_type = val.split('.')[0].strip('0123456789')
         comp_type = Component.getCompType(comp_type)
         sticker_dict = {'type':comp_type}
       elif name == 'filename':
         sticker_dict[name] = val
+      elif name == 'inliers':
+        sticker_dict[name] = float(val)
       elif name == 'left' or name == 'center':
         sticker_dict[name] = eval(val)
       elif name == 'right':
         #this assumes right is the last thing we see
         sticker_dict[name] = eval(val)
-        centroid_locations.append(sticker_dict.copy())
+        cur_list.append(sticker_dict.copy())
   return centroid_locations
 
 def getAlignmentInfo(component):
@@ -147,28 +156,54 @@ def getAlignmentInfo(component):
   return component
 
 def identifyComponents(obj):
-  callMatlab(SIFT_DETECT_SCRIPT)
+  #callMatlab(SIFT_DETECT_SCRIPT)
   comp_list = extractSIFTComponentInfo(SIFT_OUTPUT)
-  # now call c++...
-  for tag_dictionary in comp_list: #get dictionaries through list
-    args = ["./triCheck", obj]
-    #local declaration...this code is so bad? i'm sorry
-    correct_jpg, left_u, left_v, center_u, center_v, right_u, right_v = '', '', '', '', '', '', ''
-    for tag in tag_dictionary.keys():
-      if tag == 'filename':
-        correct_jpg = tag_dictionary[tag]
-      elif tag == 'left':
-        left_u, left_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
-      elif tag == 'center':
-        center_u, center_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
-      elif tag == 'right':
-        right_u, right_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
-    args.extend((correct_jpg, left_u, left_v, center_u, center_v, right_u, right_v))
-    callCpp(tag_dictionary, args)
-  #now dictionary modified with threed_etc additions
-  for idx, comp in enumerate(comp_list):
-    comp_list[idx] = getAlignmentInfo(comp) #reassigning the value
-  return comp_list
+  final_list = []
+  #now call c++... THIS CODE IS REALLY BAD!!! SORRY!!!!!!
+  for list_of_tag_dics in comp_list:
+    final_dict = {}
+    final_dict['threed_center'] = [0,0,0]
+    final_dict['threed_top_left'] = [0,0,0]
+    final_dict['threed_top_right'] = [0,0,0]        
+    inlier_counts = [(td['inliers'],idx) for idx,td in enumerate(list_of_tag_dics)]
+    inlier_counts = sorted(inlier_counts)
+    inlier_counts.reverse()
+    i = 0
+    for tag_dictionary in list_of_tag_dics: #get dictionaries through list
+      args = ["./triCheck", obj]
+      dict_w_most_inliers = list_of_tag_dics[inlier_counts[i][1]]
+      callCppIntermediate(dict_w_most_inliers, args)
+      if dict_w_most_inliers['threed_center'] != [0,0,0] and final_dict['threed_center'] == [0,0,0]:
+        final_dict['threed_center'] = dict_w_most_inliers['threed_center'];
+        final_dict['threed_normal'] = dict_w_most_inliers['threed_normal'];
+        final_dict['type'] = dict_w_most_inliers['type'];
+      if dict_w_most_inliers['threed_top_left'] != [0,0,0] and final_dict['threed_top_left'] == [0,0,0]:
+        final_dict['threed_top_left'] = dict_w_most_inliers['threed_top_left'];
+      if dict_w_most_inliers['threed_top_right'] != [0,0,0] and final_dict['threed_top_right'] == [0,0,0]:
+        final_dict['threed_top_right'] = dict_w_most_inliers['threed_top_right'];
+      if final_dict['threed_center'] != [0,0,0] and final_dict['threed_top_left'] != [0,0,0] and final_dict['threed_top_right'] != [0,0,0]: #break as soon as this is done; faster
+        break
+      i += 1
+    if final_dict['threed_center'] != [0,0,0]:
+      final_list.append(final_dict)
+    for idx, comp in enumerate(final_list):
+      final_list[idx] = getAlignmentInfo(comp) #reassigning the value
+  return final_list
+
+def callCppIntermediate(tag_dictionary, args): 
+  correct_jpg, left_u, left_v, center_u, center_v, right_u, right_v = '', '', '', '', '', '', ''  
+  for tag in tag_dictionary.keys():
+    if tag == 'filename':
+      correct_jpg = tag_dictionary[tag]
+    elif tag == 'left':
+      left_u, left_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
+    elif tag == 'center':
+      center_u, center_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
+    elif tag == 'right':
+      right_u, right_v = repr(tag_dictionary[tag][0]), repr(tag_dictionary[tag][1])
+  args.extend((correct_jpg, left_u, left_v, center_u, center_v, right_u, right_v))
+  callCpp(tag_dictionary, args) #modifies tag_dictionary w/ 3d
+
 
 def callCpp(tag_dictionary, args):
   #args = ['./triCheck', 'filename', 'lu', 'lv', 'cu', 'cv', 'ru', 'rv']
@@ -187,6 +222,7 @@ def callCpp(tag_dictionary, args):
         tag_dictionary['threed_normal'] = eval(value)
     else:
       print line.split(), ' --  something wrong here'
+  print "DONE WITH C++ CALL!"
 
 ''' OpenSCAD location and scripts '''
 OPENSCAD = '/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD'
@@ -408,14 +444,14 @@ def main(obj):
   full = stl
   components = identifyComponents(obj)
   print components
-  stl = shell(stl)
-  shelled = stl
-  components = determineFitOffset(components)
-  print components
-  checkIntersections(components)
-  stl = substitute_components(components, stl, full)
-  stl = bosses(stl)
-  side1, side2 = partingLine(components, stl)
+  # stl = shell(stl)
+  # shelled = stl
+  # components = determineFitOffset(components)
+  # print components
+  # checkIntersections(components)
+  # stl = substitute_components(components, stl, full)
+  # stl = bosses(stl)
+  # side1, side2 = partingLine(components, stl)
   print 'done!'
 
 if __name__ == '__main__':

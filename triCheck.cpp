@@ -9,6 +9,7 @@
 #include <tuple>
 
 using namespace std;
+#define PI 3.14159265
 
 // ***********************************
 // Given a centroid (in u,v) and an obj
@@ -238,6 +239,17 @@ tuple<Vector, Vector> centroid(Triangle tri) {
 	return make_tuple(centroid, normal);
 }
 
+void createMorePoints(Vector point, vector<Vector> * newpoints) {
+	float r = .001; //change me
+	for (int theta = 0; theta < 360; theta += 15) {
+		float rad = theta * PI/180;
+		float dx = r * sin(rad);
+		float dy = r * cos(rad);
+		Vector new_point = Vector(point.x + dx, point.y + dy, 0);
+		newpoints->push_back(new_point);
+	}
+}
+
 //commandline: xxx.obj filename.jpg uLeft vLeft uCenter uCenter uRight lRight
 int main(int argc, char *argv[]) {
 	if (argc != 9) {
@@ -266,25 +278,31 @@ int main(int argc, char *argv[]) {
 	Triangle right;
 	Triangle right3d;
 	//cout << "FOUND " << triangles.size() << " TRIANGLES" << endl;
-	//This assumes there is only 1 triangle that works.
+
+	vector<Vector> left_points;
+	vector<Vector> center_points;
+	vector<Vector> right_points;
+
+	// createMorePoints(left_point, &left_points);
+	// createMorePoints(center_point, &center_points);
+	// createMorePoints(right_point, &right_points);
+
 	for (int i = 0; i < triangles.size(); i++) {
 		if (pointInTriangle(left_point, triangles[i])){
 			left = triangles[i];
 			left3d = three_d_tri[i];
 			//cout << "IN LEFT IS " << left << endl;
-
-		}
-		else if (pointInTriangle(center_point, triangles[i])){
+		}			
+		if (pointInTriangle(center_point, triangles[i])){
 			center = triangles[i];
 			center3d = three_d_tri[i];
 			//cout << "IN CENTER IS " << center << endl;
 
 		}
-		else if (pointInTriangle(right_point, triangles[i])){
+		if (pointInTriangle(right_point, triangles[i])){
 			right = triangles[i];
 			right3d = three_d_tri[i];
 			//cout << "IN RIGHT IS " << right << endl;
-
 		}
 	}
 	//Just uses center normal
