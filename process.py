@@ -189,8 +189,8 @@ def identifyComponents(obj):
       i += 1
     if final_dict['threed_center'] != [0,0,0]:
       final_list.append(final_dict)
-    #for idx, comp in enumerate(final_list):
-     # final_list[idx] = getAlignmentInfo(comp) #reassigning the value
+  for idx, comp in enumerate(final_list):
+    final_list[idx] = getAlignmentInfo(comp) #reassigning the value
   return final_list
 
 def callCppIntermediate(tag_dictionary, args):

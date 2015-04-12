@@ -31,7 +31,7 @@ function [filename, lu, lv, cu, cv, ru, rv, inliers] = tag_detection(tagphoto, c
 
     %RANSAC/Geom transform to find inliers
     try
-        [fRANSAC, inliers] = estimateFundamentalMatrix(coordinates_source, coordinates_photo, 'Method', 'RANSAC', 'InlierPercentage', 90, 'Confidence', 99.99, 'DistanceThreshold', 0.25);
+        [fRANSAC, inliers] = estimateFundamentalMatrix(coordinates_source, coordinates_photo, 'Method', 'RANSAC', 'InlierPercentage', 99, 'Confidence', 99.99, 'DistanceThreshold', 0.05);
         [rotMat, ginliers, ~] = estimateGeometricTransform(coordinates_source, coordinates_photo, 'affine');
         no_inliers = size(inliers(inliers~=0),1);
         no_ginliers = size(ginliers, 1);
@@ -75,11 +75,22 @@ function [filename, lu, lv, cu, cv, ru, rv, inliers] = tag_detection(tagphoto, c
     if ru > 1
         ru = 1;
     end
+    if lv > 1 %sometimes this happens because bad skew mapping of parting lines
+        lv = 1;
+    end
+    if rv > 1
+        rv = 1;
+    end
     if lu < 0
         lu = 0;
     end
     if ru < 0 %this should never happen...
         ru = 0;
     end
-        
+    if lv < 0
+        lv = 0;
+    end
+    if rv < 0 %this should never happen...
+        rv = 0;
+    end    
 end
