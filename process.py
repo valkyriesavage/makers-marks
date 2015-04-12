@@ -16,6 +16,8 @@ class Component(Enum):
   knob = 11
   handle = 12
   hasp = 13
+  servo_mount = 14
+  servo_move = 15
 
   @classmethod
   def no_offset(cls):
@@ -30,23 +32,21 @@ class Component(Enum):
     return False
 
   @classmethod
-  def no_offset(cls, comptype):
-    non_offset = [cls.hinge,cls.knob,cls.handle,cls.hasp,cls.parting_line]
-    for non_offsettable in non_offset:
-      if comptype is non_offsetable:
-        return True
-    return False
-
-  @classmethod
   def getCompType(cls, tinystr):
     match_dict = {
       'b':cls.button,
       'j':cls.joystick,
       's':cls.speaker,
       'm':cls.main_board,
+      'gyro':cls.gyro,
+      'd':cls.light_sensor,
       'h':cls.hinge,
       'l':cls.parting_line,
       'r':cls.parting_line,
+      'knob':cls.knob,
+      'screen':cls.screen,
+      'smount':cls.servo_mount,
+      'smove':cls.servo_move,
       # jingyi, please update this as you add more!
     }
     return match_dict[tinystr]
