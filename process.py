@@ -159,7 +159,7 @@ def getAlignmentInfo(component):
   return component
 
 def identifyComponents(obj):
-  #callMatlab(SIFT_DETECT_SCRIPT)
+  callMatlab(SIFT_DETECT_SCRIPT)
   comp_list = extractSIFTComponentInfo(SIFT_OUTPUT)
   # print "COMP LIST IS "
   # print comp_list
