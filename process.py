@@ -118,6 +118,8 @@ def extractComponentInfo(location=TRANSFORM_OUTPUT):
     for line in f:
       name,val = line.split()
       # a totally unsafe practice.  but... eh.
+      if val == 'NaN':
+        val = '0'
       info[name] = eval(val)
   return info
 
@@ -147,7 +149,7 @@ def extractSIFTComponentInfo(location=SIFT_OUTPUT):
         #this assumes right is the last thing we see
         sticker_dict[name] = eval(val)
         cur_list.append(sticker_dict.copy())
-  centroid_locations.append(cur_list)      
+  centroid_locations.append(cur_list)
   return centroid_locations
 
 def getAlignmentInfo(component):
@@ -164,7 +166,7 @@ def identifyComponents(obj):
   # print "COMP LIST IS "
   # print comp_list
   final_list = []
-  #now call c++...this code could be cleaner 
+  #now call c++...this code could be cleaner
   for list_of_tag_dics in comp_list:
     final_dict = {}
     final_dict['threed_center'] = [0,0,0]
@@ -294,11 +296,15 @@ intersection() {
     text = '''
 intersection() {
   %(comp_0)s
-  import("%(obj)s");
+  difference() {
+    import("%(obj)s");
+    import("%(deflated)s");
+  }
 }
 ''' % {
     'comp_0':placeCompOpenSCAD(components[0], geom='clearance'),
-    'obj':object_body
+    'obj':object_body,
+    'deflated':deflated,
   }
 
   if script == SUB_COMPONENT_SCRIPT:
@@ -434,7 +440,7 @@ def shell(stl):
   writeOpenSCAD(SHELL_SCRIPT, object_body=stl, deflated=deflated)
   callOpenSCAD(SHELL_SCRIPT, oname)
 
-def determineFitOffset(components, obj):
+def determineFitOffset(components, full, deflated):
   # figure out how far back we need to set each component to make it
   # not intersect the body of the object.
   for comp in components:
@@ -446,10 +452,10 @@ def determineFitOffset(components, obj):
     print 'original:', loc
     while True:
       mod_comp = dict(comp)
-      mod_comp['coords'] = [c_i - n_i*.5 for c_i, n_i in zip(loc, normal)]
-      writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=obj)
+      mod_comp['coords'] = [c_i - n_i for c_i, n_i in zip(loc, normal)]
+      writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=full, deflated=deflated)
       callOpenSCAD(CHECK_INTERSECT_SCRIPT, SCRATCH)
-      if isEmptySTL(SCRATCH) or ct > 50:
+      if isEmptySTL(SCRATCH) or ct > 10:
         # in the > 50 case... wtf???
         break
       loc = mod_comp['coords']
@@ -462,7 +468,7 @@ def checkIntersections(components):
   # check if any component intersects any other component
   for c1 in components:
     for c2 in components:
-      if c1 == c2:
+      if c1 == c2 or c1['type'] is Component.parting_line or c2['type'] is Component.parting_line:
         continue
       writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [c1,c2])
       callOpenSCAD(CHECK_INTERSECT_SCRIPT, SCRATCH)
@@ -470,9 +476,9 @@ def checkIntersections(components):
         raise Exception('%(c1)s (%(c1l)s) and %(c2)s (%(c2l)s) intersect!' %
                           {
                             'c1':c1['type'],
-                            'c1l':string(c1['coords']),
+                            'c1l':str(c1['coords']),
                             'c2':c2['type'],
-                            'c2l':string(c2['coords']),
+                            'c2l':str(c2['coords']),
                             }
                        )
 
@@ -482,6 +488,7 @@ def substitute_components(components, stl, full):
   callOpenSCAD(SUB_COMPONENT_SCRIPT, oname)
   return oname
 
+import math
 def bosses(components, stl, full):
   # some things that will be important:
   boss_rotations = []
@@ -490,7 +497,12 @@ def bosses(components, stl, full):
     if Component.part(component['type']):
       boss_rotations = list(component['rotations'])
       boss_base = list(component['coords'])
-      boss_move = list(component['threed_normal'])
+      # as we build bosses, we want them to slide around IN THE PLANE.  so pick
+      # a vector IN THE PLANE
+      boss_move = [(component['threed_center'][i] - component['threed_top_left'][i])
+                    for i in range(len(component['threed_center']))]
+      boss_move_len = math.sqrt(sum([c*c for c in boss_move]))
+      boss_move = [c/boss_move_len for c in boss_move]
       print boss_rotations
       # now to rotate: we actually want to have bosses that are ORTHOGONAL to
       # our parting line: otherwise they will not be very useful...
@@ -548,8 +560,9 @@ def main(obj):
   components = identifyComponents(obj)
   print components
   stl = stl.replace('.stl','-shelled.stl')#shell(stl)
+  deflated = stl.replace('-shelled.stl','-deflated.stl')#shell(stl)
   shelled = stl
-  components = determineFitOffset(components, shelled)
+  components = determineFitOffset(components, full, deflated)
   print components
   checkIntersections(components)
   stl = bosses(components, stl, full)
