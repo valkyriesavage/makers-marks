@@ -75,7 +75,13 @@ function [filename, lu, lv, cu, cv, ru, rv, inliers] = tag_detection(tagphoto, c
     if ru > 1
         ru = 1;
     end
-    if lv > 1 %sometimes this happens because bad skew mapping of parting lines
+    if cu > 1 %sometimes this happens because bad skew mapping of parting lines
+        cu = 1;
+    end
+    if cv > 1
+        cv = 1;
+    end
+    if lv > 1 
         lv = 1;
     end
     if rv > 1
@@ -90,7 +96,13 @@ function [filename, lu, lv, cu, cv, ru, rv, inliers] = tag_detection(tagphoto, c
     if lv < 0
         lv = 0;
     end
-    if rv < 0 %this should never happen...
+    if rv < 0 
         rv = 0;
-    end    
+    end   
+    if cu < 0
+        cu = 0;
+    end
+    if cv < 0 
+        cv = 0;
+    end  
 end

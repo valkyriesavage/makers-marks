@@ -35,16 +35,8 @@ for sname = snames
             if strcmp(fext(2),'jpg')
                 [t_filename, t_lu, t_lv, t_cu, t_cv, t_ru, t_rv, inliers] = tag_detection(str, fstr);
                 curr_inliers = inliers;
-                if curr_inliers > 10 || (strcmp(str, 'b2.jpg') && curr_inliers > 5.5) || (strcmp(str, 'd.jpg') && curr_inliers > 5) %remember all data stronger than x
+                if curr_inliers > 9.9 %remember all data stronger than x
                     filename = t_filename;
-    %{
-                    lu = t_lu;
-                    lv = t_lv;
-                    cu = t_cu;
-                    cv = t_cv;
-                    ru = t_ru;
-                    rv = t_rv;
-%}
                     fprintf(fileID, 'sticker %s\n', str);
                     fprintf(fileID, 'filename %s\n', t_filename);
                     fprintf(fileID, 'inliers %f\n', curr_inliers);                   

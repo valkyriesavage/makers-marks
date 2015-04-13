@@ -163,8 +163,8 @@ def getAlignmentInfo(component):
 def identifyComponents(obj):
   callMatlab(SIFT_DETECT_SCRIPT)
   comp_list = extractSIFTComponentInfo(SIFT_OUTPUT)
-  # print "COMP LIST IS "
-  # print comp_list
+  print "COMP LIST IS "
+  print comp_list
   final_list = []
   #now call c++...this code could be cleaner
   for list_of_tag_dics in comp_list:
@@ -193,6 +193,7 @@ def identifyComponents(obj):
       i += 1
     if final_dict['threed_center'] != [0,0,0]:
       final_list.append(final_dict)
+  print final_list    
   for idx, comp in enumerate(final_list):
     final_list[idx] = getAlignmentInfo(comp) #reassigning the value
   return final_list
