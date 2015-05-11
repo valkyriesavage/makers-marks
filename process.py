@@ -28,7 +28,7 @@ class Component(Enum):
 
   @classmethod
   def part(cls, comptype):
-    part_at = [cls.hinge,cls.parting_line]
+    part_at = [cls.hinge,cls.parting_line,cls.parting_line_calculated]
     for partable in part_at:
       if comptype is partable:
         return True
@@ -54,6 +54,27 @@ class Component(Enum):
       # jingyi, please update this as you add more!
     }
     return match_dict[tinystr]
+
+  @classmethod
+  def max_offset(cls, comptype):
+    if Component.no_offset(comptype):
+      return 0
+    match_dict = {
+        cls.button: 30,
+        cls.joystick: 15,
+        cls.speaker: 50,
+        cls.main_board: 50,
+        cls.gyro: 50,
+        cls.light_sensor: 30,
+        cls.LED_ring: 10,
+        cls.knob: 10,
+        cls.screen: 10,
+        cls.servo_mount: 3,
+        cls.servo_move: 3,
+      # jingyi, please update this as you add more!
+    }
+    if not comptype in match_dict:
+      return 10 # default to 1mm
 
   @classmethod
   def toStr(cls, comptype):
@@ -180,6 +201,7 @@ def postProcComps(comps):
     calculated_pl = extractComponentInfo()
     calculated_pl['type'] = Component.parting_line_calculated
     comps.append(calculated_pl)
+    comps.remove([comp for comp in parting_lines_to_avg]) # don't need 'em
   return comps
 
 def identifyComponents(obj):
@@ -326,10 +348,10 @@ intersection() {
 def writeOpenSCAD(script, components={}, object_body='', deflated='',
                   full_body='', top='', boss=None, bosses=[], topbot='',
                   debug=False):
-  text = ''
+  text = 'union() {\n'
 
   if script == CHECK_INTERSECT_SCRIPT and object_body == '':
-    text = '''
+    text += '''
 intersection() {
   %(comp_0)s
   %(comp_1)s
@@ -339,7 +361,7 @@ intersection() {
     'comp_1':placeCompOpenSCAD(components[1], geom='clearance'),
   }
   if script == CHECK_INTERSECT_SCRIPT and not object_body == '':
-    text = '''
+    text += '''
 intersection() {
   %(comp_0)s
   difference() {
@@ -363,7 +385,7 @@ intersection() {
       comps_sub += placeCompOpenSCAD(component, geom='sub')
       comps_add += internalOnly(placeCompOpenSCAD(component, geom='add'),
                                 full_body)
-    text = '''
+    text += '''
 difference() {
 \timport("%(obj)s");
 // first we need to subtract everything
@@ -386,7 +408,7 @@ difference() {
     if pline == '':
       print 'wtf? no parting line?'
     if top == True:
-      text = '''
+      text += '''
 difference(){
 \timport("%(obj)s");
 \t%(pline)s
@@ -396,7 +418,7 @@ difference(){
     'pline':pline,
     }
     if top == False:
-      text = '''
+      text += '''
 intersection(){
 \timport("%(obj)s");
 \t%(pline)s
@@ -412,7 +434,7 @@ intersection(){
       placecomp = placeCompOpenSCAD(comp, geom='clearance')
       all_comp_union += (placecomp)
     all_comp_union += '}'
-    text = '''
+    text += '''
 intersection() {
 \t%(boss)s
 \t%(comps)s
@@ -428,7 +450,7 @@ intersection() {
     for boss in bosses:
       bosses_add += placeBossOpenSCAD(boss,'add',topbot)
       bosses_sub += placeBossOpenSCAD(boss,'sub',topbot)
-    text = '''
+    text += '''
 difference() {
   // add together bosses and hollowed body
   union() {
@@ -456,7 +478,7 @@ difference() {
     }
 
   if script == SHELL_SCRIPT:
-    text = '''
+    text += '''
 difference() {
   import("%(obj)s");
   import("%(deflated)s");
@@ -466,6 +488,7 @@ difference() {
       'deflated':deflated
     }
 
+  text += '\n} // close union'
   if debug:
     print text
   else:
@@ -507,6 +530,7 @@ def determineFitOffset(components, full, deflated):
       loc = mod_comp['coords']
       ct += 1
     comp['coords'] = loc
+    comp['offset'] = ct # note that this is in units of mm
     print 'new:', loc
   return components
 
@@ -540,9 +564,8 @@ def calc_bosses(components):
   boss_rotations = []
   boss_base = []
   for component in components:
-    if component['type'] is Component.parting_line_calculated:#part(component['type']):
+    if Component.part(component['type']):
       boss_rotations = list(component['rotations'])
-      boss_rotations[0] = 180
       boss_base = list(component['coords'])
       break
   if len(boss_rotations) == 0:
@@ -551,7 +574,7 @@ def calc_bosses(components):
   # first order of business, which bosses are good?
   good_bosses = []
   grid_spacing = 30
-  min_coords = -90
+  min_coords = -150
   max_coords = -min_coords
   field_x = range(min_coords,max_coords,grid_spacing)
   field_z = range(min_coords,max_coords,grid_spacing)
@@ -562,7 +585,7 @@ def calc_bosses(components):
         'coords':boss_base,
         'axis':0,
         'rotations':boss_rotations,
-        'offset':[x,z,0],
+        'offset':[x,0,z],
       }
       writeOpenSCAD(BOSS_CHECK_COMPS_SCRIPT, components, boss=potential_boss)
       callOpenSCAD(BOSS_CHECK_COMPS_SCRIPT, SCRATCH)
@@ -576,7 +599,7 @@ def boss_addin(stl, full, topbot, bosses):
   callOpenSCAD(BOSS_PUT_SCRIPT,bossed_stl)
   return bossed_stl
 
-def partingLine(components, bosses, stl):
+def partingLine(components, stl):
   o_top = stl.replace('.stl', '-top.stl')
   o_bot = stl.replace('.stl', '-bot.stl')
   writeOpenSCAD(PART_SCRIPT, components, object_body=stl, top=True)
