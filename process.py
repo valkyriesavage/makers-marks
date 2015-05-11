@@ -162,6 +162,26 @@ def getAlignmentInfo(component):
   component.update(calculated)
   return component
 
+def postProcComps(comps):
+  # basically, we need to do any calculations (e.g., for parting line)
+  parting_lines_to_avg = []
+  for comp in comps:
+    if comp['type'] == Component.parting_line:
+      parting_lines_to_avg.append(comp)
+  if len(parting_lines_to_avg) > 1:
+    varz = {}
+    varz['pl1_threed_center'] = parting_lines_to_avg[0]['threed_center']
+    varz['pl1_top_left'] = parting_lines_to_avg[0]['threed_top_left']
+    varz['pl1_top_right'] = parting_lines_to_avg[0]['threed_top_right']
+    varz['pl2_threed_center'] = parting_lines_to_avg[1]['threed_center']
+    varz['pl2_top_left'] = parting_lines_to_avg[1]['threed_top_left']
+    varz['pl2_top_right'] = parting_lines_to_avg[1]['threed_top_right']
+    callMatlab('partingLine.m', variables=varz)
+    calculated_pl = extractComponentInfo()
+    calculated_pl['type'] = Component.parting_line_calculated
+    comps.append(calculated_pl)
+  return comps
+
 def identifyComponents(obj):
   callMatlab(SIFT_DETECT_SCRIPT)
   comp_list = extractSIFTComponentInfo(SIFT_OUTPUT)
@@ -198,6 +218,7 @@ def identifyComponents(obj):
   print final_list    
   for idx, comp in enumerate(final_list):
     final_list[idx] = getAlignmentInfo(comp) #reassigning the value
+  final_list = postProcComps(final_list)
   return final_list
 
 def callCppIntermediate(tag_dictionary, args):
