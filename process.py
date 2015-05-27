@@ -285,6 +285,8 @@ PART_SCRIPT = os.path.join(os.getcwd(), 'part.scad')
 BOSS_CHECK_COMPS_SCRIPT = os.path.join(os.getcwd(), 'bosscheckcomps.scad')
 BOSS_PUT_SCRIPT = os.path.join(os.getcwd(), 'bossput.scad')
 SHELL_SCRIPT = os.path.join(os.getcwd(), 'shell.scad')
+MINKOWSKI_TOP = os.path.join(os.getcwd(), 'minkowski-top.scad')
+MINKOWSKI_BOT = os.path.join(os.getcwd(), 'minkowski-bot.scad')
 SCRATCH = os.path.join(os.getcwd(),'scratch.stl')
 
 '''
@@ -488,6 +490,77 @@ difference() {
       'deflated':deflated
     }
 
+  if script == MINKOWSKI_TOP or script == MINKOWSKI_BOT:
+    for comp in components:
+      if comp['type'] is Component.parting_line_calculated:
+        parting_line = comp
+        break
+    topbot = 'top'
+    diffint = 'difference'
+    if script != MINKOWSKI_TOP:
+      topbot = 'bot'
+      diffint = 'intersection'
+    text = '''
+module position_original() {
+    rotate([-90,0,0]) { // need this
+        rotate(%(rotation)s) { // just negate numbers
+            translate(%(translation)s) { // negate numbers
+                import("%(full_body)s");
+            }
+        }
+    }
+}
+
+module position_%(topbot)s() {
+    rotate([-90,0,0]) { // need this
+        rotate(%(rotation)s) { // just negate numbers
+            translate(%(translation)s) { // negate numbers
+                import("%(object_body)s");
+            }
+        }
+    }
+}
+
+module xy_cutbox() {
+    translate([-1000,-1000,0]) {
+        cube(2000);
+    }
+}
+
+union() {
+    translate([0,0,1]) { // move back into place after cut happens
+        %(diffint)s() { // we need to cut off a bit of the original model to make this work
+            translate([0,0,-1]) {
+                position_%(topbot)s();
+            }
+            xy_cutbox();
+        }
+    }
+    translate([0,0,-2]) {// we want to go down 2 and up 2
+        linear_extrude(height = 4) { // so we translate -2 and extrude 4
+            difference() { // we are just going to take the area between the two profiles
+                offset(r=-2.25) { // we can offset from the full body part by -2.25 and -3.25 to complement our wall thicknesses of 2mm.
+                    projection(cut=true) {
+                        position_original();
+                    }
+                }
+                offset(r=-3.25) {
+                    projection(cut=true) {
+                        position_original();
+                    }
+                }
+            }
+        }
+    }
+    ''' % {
+      'topbot' : topbot,
+      'diffint' : diffint,
+      'translation' : str([-t for t in parting_line['translation']]),
+      'rotation' : str([-r for r in parting_line['rotation']]),
+      'object_body' : object_body,
+      'full_body' : full_body,
+    }
+
   text += '\n} // close union'
   if debug:
     print text
@@ -608,6 +681,15 @@ def partingLine(components, stl):
   callOpenSCAD(PART_SCRIPT, o_bot)
   return (o_top,o_bot)
 
+def add_lip(components, side1, side2, full):
+  o_top = side1.replace('.stl', '-minkowski.stl')
+  o_bot = side2.replace('.stl', '-minkowski.stl')
+  writeOpenSCAD(MINKOWSKI_TOP, components, object_body=side1, full_body=full)
+  callOpenSCAD(MINKOWSKI_TOP, o_top)
+  writeOpenSCAD(MINKOWSKI_TOP, components, object_body=side2, full_body=full)
+  callOpenSCAD(MINKOWSKI_TOP, o_bot)
+  return (o_top, o_bot)
+
 ''' main function '''
 
 def main(obj):
@@ -627,6 +709,7 @@ def main(obj):
   side1, side2 = partingLine(components, stl)
   side1 = boss_addin(side1,full,'top',bosses)
   side2 = boss_addin(side2,full,'bot',bosses)
+  side1, side2 = add_lip(components, side1, side2, full)
   print 'done!'
 
 if __name__ == '__main__':
