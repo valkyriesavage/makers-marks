@@ -1,86 +1,86 @@
 solid OpenSCAD_Model
-  facet normal 0 -2.22045e-16 -1
+  facet normal 2.22045e-16 4.93038e-32 -1
     outer loop
-      vertex 190000 10000 -2.22045e-12
-      vertex 190000 -190000 4.21885e-11
-      vertex -10000 10000 -2.22045e-12
+      vertex 10000 2.22045e-12 -190000
+      vertex 10000 -200000 -190000
+      vertex -190000 -4.21885e-11 -190000
     endloop
   endfacet
-  facet normal 0 -2.22045e-16 -1
+  facet normal 2.22045e-16 4.93038e-32 -1
     outer loop
-      vertex -10000 10000 -2.22045e-12
-      vertex 190000 -190000 4.21885e-11
-      vertex -10000 -190000 4.21885e-11
+      vertex -190000 -4.21885e-11 -190000
+      vertex 10000 -200000 -190000
+      vertex -190000 -200000 -190000
     endloop
   endfacet
-  facet normal -1 0 0
+  facet normal 1 2.22045e-16 2.22045e-16
     outer loop
-      vertex -10000 -190000 4.21885e-11
-      vertex -10000 -190000 200000
-      vertex -10000 10000 -2.22045e-12
+      vertex 10000 2.22045e-12 10000
+      vertex 10000 -200000 10000
+      vertex 10000 -200000 -190000
     endloop
   endfacet
-  facet normal -1 0 0
+  facet normal 1 2.22045e-16 2.22045e-16
     outer loop
-      vertex -10000 10000 -2.22045e-12
-      vertex -10000 -190000 200000
-      vertex -10000 10000 200000
+      vertex 10000 2.22045e-12 -190000
+      vertex 10000 2.22045e-12 10000
+      vertex 10000 -200000 -190000
     endloop
   endfacet
-  facet normal 0 -1 2.22045e-16
+  facet normal -2.22045e-16 1 -4.93038e-32
     outer loop
-      vertex -10000 -190000 4.21885e-11
-      vertex 190000 -190000 4.21885e-11
-      vertex 190000 -190000 200000
+      vertex 10000 2.22045e-12 10000
+      vertex 10000 2.22045e-12 -190000
+      vertex -190000 -4.21885e-11 10000
     endloop
   endfacet
-  facet normal 0 -1 2.22045e-16
+  facet normal -2.22045e-16 1 -4.93038e-32
     outer loop
-      vertex -10000 -190000 200000
-      vertex -10000 -190000 4.21885e-11
-      vertex 190000 -190000 200000
+      vertex -190000 -4.21885e-11 10000
+      vertex 10000 2.22045e-12 -190000
+      vertex -190000 -4.21885e-11 -190000
     endloop
   endfacet
-  facet normal 0 1 -2.22045e-16
+  facet normal -1 -2.22045e-16 -2.22045e-16
     outer loop
-      vertex -10000 10000 200000
-      vertex 190000 10000 200000
-      vertex -10000 10000 -2.22045e-12
+      vertex -190000 -4.21885e-11 -190000
+      vertex -190000 -200000 -190000
+      vertex -190000 -4.21885e-11 10000
     endloop
   endfacet
-  facet normal 0 1 -2.22045e-16
+  facet normal -1 -2.22045e-16 -2.22045e-16
     outer loop
-      vertex -10000 10000 -2.22045e-12
-      vertex 190000 10000 200000
-      vertex 190000 10000 -2.22045e-12
+      vertex -190000 -4.21885e-11 10000
+      vertex -190000 -200000 -190000
+      vertex -190000 -200000 10000
     endloop
   endfacet
-  facet normal 1 0 0
+  facet normal 2.22045e-16 -1 4.93038e-32
     outer loop
-      vertex 190000 10000 -2.22045e-12
-      vertex 190000 10000 200000
-      vertex 190000 -190000 200000
+      vertex -190000 -200000 10000
+      vertex -190000 -200000 -190000
+      vertex 10000 -200000 -190000
     endloop
   endfacet
-  facet normal 1 0 0
+  facet normal 2.22045e-16 -1 4.93038e-32
     outer loop
-      vertex 190000 -190000 4.21885e-11
-      vertex 190000 10000 -2.22045e-12
-      vertex 190000 -190000 200000
+      vertex 10000 -200000 10000
+      vertex -190000 -200000 10000
+      vertex 10000 -200000 -190000
     endloop
   endfacet
-  facet normal 0 2.22045e-16 1
+  facet normal -2.22045e-16 -4.93038e-32 1
     outer loop
-      vertex -10000 10000 200000
-      vertex -10000 -190000 200000
-      vertex 190000 -190000 200000
+      vertex -190000 -4.21885e-11 10000
+      vertex -190000 -200000 10000
+      vertex 10000 -200000 10000
     endloop
   endfacet
-  facet normal 0 2.22045e-16 1
+  facet normal -2.22045e-16 -4.93038e-32 1
     outer loop
-      vertex 190000 10000 200000
-      vertex -10000 10000 200000
-      vertex 190000 -190000 200000
+      vertex 10000 2.22045e-12 10000
+      vertex -190000 -4.21885e-11 10000
+      vertex 10000 -200000 10000
     endloop
   endfacet
 endsolid OpenSCAD_Model
