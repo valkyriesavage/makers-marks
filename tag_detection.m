@@ -58,7 +58,7 @@ function [filename, lu, lv, cu, cv, ru, rv, inliers] = tag_detection(tagphoto, c
     [cx, cy] = transformPointsForward(rotMat,hscx,hscy);
     [lx, ly] = transformPointsForward(rotMat,0,0);
     [rx, ry] = transformPointsForward(rotMat,scx,0);
-    if strcmp(comparisonphoto, 'm.jpg') %fix mainboard corners
+    if strcmp(tagphoto, 'm.jpg') %fix mainboard corners
         [lx, ly] = transformPointsForward(rotMat,0,scy);
         [rx, ry] = transformPointsForward(rotMat,0,0);  
     end
