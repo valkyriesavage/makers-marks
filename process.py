@@ -163,7 +163,7 @@ def getAlignmentInfo(component):
 def identifyComponents(obj):
   callMatlab(SIFT_DETECT_SCRIPT)
   comp_list = extractSIFTComponentInfo(SIFT_OUTPUT)
-  print "COMP LIST IS "
+  print "after matlab, COMP LIST IS "
   print comp_list
   final_list = []
   #now call c++...this code could be cleaner
@@ -560,15 +560,15 @@ def main(obj):
   full = stl
   components = identifyComponents(obj)
   print components
-  stl = stl.replace('.stl','-shelled.stl')#shell(stl)
-  deflated = stl.replace('-shelled.stl','-deflated.stl')#shell(stl)
-  shelled = stl
-  components = determineFitOffset(components, full, deflated)
-  print components
-  checkIntersections(components)
-  stl = bosses(components, stl, full)
-  stl = substitute_components(components, shelled, full)
-  side1, side2 = partingLine(components, stl)
+  # stl = stl.replace('.stl','-shelled.stl')#shell(stl)
+  # deflated = stl.replace('-shelled.stl','-deflated.stl')#shell(stl)
+  # shelled = stl
+  # components = determineFitOffset(components, full, deflated)
+  # print components
+  # checkIntersections(components)
+  # stl = bosses(components, stl, full)
+  # stl = substitute_components(components, shelled, full)
+  # side1, side2 = partingLine(components, stl)
   print 'done!'
 
 if __name__ == '__main__':
