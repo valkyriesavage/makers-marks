@@ -3,9 +3,13 @@
 *.m~
 .*.swp
 scratch.stl
+bosscheckcomps.scad
+bossput.scad
 checksize.scad
 checkintersect.scad
 partboss.scad
+minkowski-bot.scad
+minkowski-top.scad
 shell.scad
 part.scad
 subcomps.scad
