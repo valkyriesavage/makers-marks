@@ -201,7 +201,9 @@ def postProcComps(comps):
     calculated_pl = extractComponentInfo()
     calculated_pl['type'] = Component.parting_line_calculated
     comps.append(calculated_pl)
-    comps.remove([comp for comp in parting_lines_to_avg]) # don't need 'em
+    #comps.remove([comp for comp in parting_lines_to_avg]) # don't need 'em
+  elif len(parting_lines_to_avg) == 1:
+    parting_lines_to_avg[0]['type'] = Component.parting_line_calculated
   return comps
 
 def identifyComponents(obj):
@@ -237,7 +239,7 @@ def identifyComponents(obj):
       i += 1
     if final_dict['threed_center'] != [0,0,0]:
       final_list.append(final_dict)
-  print final_list    
+  print final_list
   for idx, comp in enumerate(final_list):
     final_list[idx] = getAlignmentInfo(comp) #reassigning the value
   final_list = postProcComps(final_list)
@@ -279,6 +281,7 @@ def callCpp(tag_dictionary, args):
 
 ''' OpenSCAD location and scripts '''
 OPENSCAD = '/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD'
+OPENSCAD_OLD = '/Applications/OpenSCAD-old.app/Contents/MacOS/OpenSCAD'
 CHECK_INTERSECT_SCRIPT = os.path.join(os.getcwd(), 'checkintersect.scad')
 SUB_COMPONENT_SCRIPT = os.path.join(os.getcwd(), 'subcomps.scad')
 PART_SCRIPT = os.path.join(os.getcwd(), 'part.scad')
@@ -299,12 +302,27 @@ We expect to receive the following from this part of the pipeline:
 
 '''
 
-def callOpenSCAD(script, oname, otherargs=''):
+def callOpenSCAD(script, oname, otherargs='', allow_empty=False):
   call = [OPENSCAD, '-o', oname, script]
   if not otherargs == '':
     call = [OPENSCAD, '-o', oname, otherargs, script]
   # this will throw an exception if the call fails for some reason
-  subprocess.check_call(call)
+  if allow_empty:
+    proc = subprocess.Popen(' '.join(call),shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,close_fds=True)
+    line = proc.stdout.readline()
+    if "Current top level object is empty." in line:
+      return True
+    if line == '':
+      return False
+    print proc.returncode
+    proc.terminate()
+    raise Exception(' '.join(['call failed : ', ' '.join(call)]))
+  else:
+    subprocess.check_call(call)
+  return False
+
+def createsEmptySTL(script, oname, otherargs=''):
+  return callOpenSCAD(script, oname, otherargs, allow_empty=True)
 
 def placeCompOpenSCAD(component, geom):
   output = '''
@@ -366,15 +384,11 @@ intersection() {
     text += '''
 intersection() {
   %(comp_0)s
-  difference() {
-    import("%(obj)s");
-    import("%(deflated)s");
-  }
+  import("%(obj)s");
 }
 ''' % {
     'comp_0':placeCompOpenSCAD(components[0], geom='clearance'),
     'obj':object_body,
-    'deflated':deflated,
   }
 
   if script == SUB_COMPONENT_SCRIPT:
@@ -497,49 +511,10 @@ difference() {
         break
     topbot = 'top'
     diffint = 'difference'
-    if script != MINKOWSKI_TOP:
-      topbot = 'bot'
-      diffint = 'intersection'
-    text = '''
-module position_original() {
-    rotate([-90,0,0]) { // need this
-        rotate(%(rotation)s) { // just negate numbers
-            translate(%(translation)s) { // negate numbers
-                import("%(full_body)s");
-            }
-        }
-    }
-}
-
-module position_%(topbot)s() {
-    rotate([-90,0,0]) { // need this
-        rotate(%(rotation)s) { // just negate numbers
-            translate(%(translation)s) { // negate numbers
-                import("%(object_body)s");
-            }
-        }
-    }
-}
-
-module xy_cutbox() {
-    translate([-1000,-1000,0]) {
-        cube(2000);
-    }
-}
-
-union() {
-    translate([0,0,1]) { // move back into place after cut happens
-        %(diffint)s() { // we need to cut off a bit of the original model to make this work
-            translate([0,0,-1]) {
-                position_%(topbot)s();
-            }
-            xy_cutbox();
-        }
-    }
-    translate([0,0,-2]) {// we want to go down 2 and up 2
+    orig = '''
         linear_extrude(height = 4) { // so we translate -2 and extrude 4
             difference() { // we are just going to take the area between the two profiles
-                offset(r=-2.25) { // we can offset from the full body part by -2.25 and -3.25 to complement our wall thicknesses of 2mm.
+                offset(r=-2.25) { // we can offset from the full body part by -2.25 and -3.
                     projection(cut=true) {
                         position_original();
                     }
@@ -551,12 +526,77 @@ union() {
                 }
             }
         }
+'''
+    if script != MINKOWSKI_TOP:
+      topbot = 'bot'
+      diffint = 'intersection'
+      orig = '''
+        linear_extrude(height = 4) { // just need a little lip on the bottom piece
+            difference() { // we are just going to take the area between the two profiles
+                projection(cut=true) {
+                    position_original();
+                }
+                offset(r=-2) {
+                    projection(cut=true) {
+                        position_original();
+                    }
+                }
+            }
+        }
+'''
+    text = '''
+module position_original() {
+    rotate([-90,0,0]) { // need this
+      rotate(%(axis)s) { // negate these, too
+        rotate(%(z_rotation)s) { // negate and do Z first
+          rotate(%(xy_rotation)s) { // negate and do Z first
+            translate(%(translation)s) { // negate numbers
+                import("%(full_body)s");
+            }
+        }
+      }
+    }
+}
+
+module position_%(topbot)s() {
+    rotate([-90,0,0]) { // need this
+      rotate(%(axis)s) { // negate these, too
+        rotate(%(z_rotation)s) { // negate and do Z first
+          rotate(%(xy_rotation)s) { // negate and do Z first
+            translate(%(translation)s) { // negate numbers
+                import("%(object_body)s");
+            }
+        }
+      }
+    }
+}
+
+module xy_cutbox() {
+    translate([-1000,-1000,0]) {
+        cube(2000);
+    }
+}
+
+union() {
+    translate([0,0,1]) { // move back into place after cut happens
+        %(diffint)s() { // we need to cut off a bit of the base model to make this work
+            translate([0,0,-1]) {
+                position_%(topbot)s();
+            }
+            xy_cutbox();
+        }
+    }
+    translate([0,0,-2]) {// we want to go down 2 and up 2
+        %(orig)s
     }
     ''' % {
       'topbot' : topbot,
       'diffint' : diffint,
-      'translation' : str([-t for t in parting_line['translation']]),
-      'rotation' : str([-r for r in parting_line['rotation']]),
+      'translation' : str([-t for t in parting_line['coords']]),
+      'z_rotation' : str([0,0,-parting_line['rotations'][-1]]),
+      'xy_rotation' : str([0,-parting_line['rotations'][1],0]),
+      'axis' : str([-r for r in parting_line['axis']]),
+      'orig' : orig,
       'object_body' : object_body,
       'full_body' : full_body,
     }
@@ -581,8 +621,9 @@ def shell(stl):
   oname = stl.replace('.stl','-shelled.stl')
   writeOpenSCAD(SHELL_SCRIPT, object_body=stl, deflated=deflated)
   callOpenSCAD(SHELL_SCRIPT, oname)
+  return oname
 
-def determineFitOffset(components, full, deflated):
+def determineFitOffset(components, full, deflated, shelled):
   # figure out how far back we need to set each component to make it
   # not intersect the body of the object.
   for comp in components:
@@ -595,9 +636,9 @@ def determineFitOffset(components, full, deflated):
     while True:
       mod_comp = dict(comp)
       mod_comp['coords'] = [c_i - n_i for c_i, n_i in zip(loc, normal)]
-      writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=full, deflated=deflated)
-      callOpenSCAD(CHECK_INTERSECT_SCRIPT, SCRATCH)
-      if isEmptySTL(SCRATCH) or ct > 10:
+      writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=shelled)
+      empty = createsEmptySTL(CHECK_INTERSECT_SCRIPT, SCRATCH)
+      if empty or ct > 10:
         # in the > 50 case... wtf???
         break
       loc = mod_comp['coords']
@@ -614,8 +655,8 @@ def checkIntersections(components):
       if c1 == c2 or c1['type'] is Component.parting_line or c2['type'] is Component.parting_line:
         continue
       writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [c1,c2])
-      callOpenSCAD(CHECK_INTERSECT_SCRIPT, SCRATCH)
-      if not isEmptySTL(SCRATCH):
+      empty = createsEmptySTL(CHECK_INTERSECT_SCRIPT, SCRATCH)
+      if not empty:
         raise Exception('%(c1)s (%(c1l)s) and %(c2)s (%(c2l)s) intersect!' %
                           {
                             'c1':c1['type'],
@@ -661,8 +702,8 @@ def calc_bosses(components):
         'offset':[x,0,z],
       }
       writeOpenSCAD(BOSS_CHECK_COMPS_SCRIPT, components, boss=potential_boss)
-      callOpenSCAD(BOSS_CHECK_COMPS_SCRIPT, SCRATCH)
-      if isEmptySTL(SCRATCH):
+      empty = createsEmptySTL(BOSS_CHECK_COMPS_SCRIPT, SCRATCH)
+      if empty:
         good_bosses.append(potential_boss)
   return good_bosses
 
@@ -699,9 +740,9 @@ def main(obj):
   components = identifyComponents(obj)
   print components
   stl = stl.replace('.stl','-shelled.stl')#shell(stl)
-  deflated = stl.replace('-shelled.stl','-deflated.stl')#shell(stl)
   shelled = stl
-  components = determineFitOffset(components, full, deflated)
+  deflated = stl.replace('-shelled.stl','-deflated.stl')#shell(stl)
+  components = determineFitOffset(components, full, deflated, shelled)
   print components
   checkIntersections(components)
   bosses = calc_bosses(components)
