@@ -178,7 +178,7 @@ def extractSIFTComponentInfo(location=SIFT_OUTPUT):
 def getAlignmentInfo(component):
   # in here we need threed_center, threed_top_right,
   # threed_top_left, and threed_normal
-  callMatlab(FIND_ROTATION_SCRIPT, component)
+  #callMatlab(FIND_ROTATION_SCRIPT, component)
   calculated = extractComponentInfo(location=TRANSFORM_OUTPUT)
   component.update(calculated)
   return component

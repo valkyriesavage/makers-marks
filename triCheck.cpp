@@ -306,8 +306,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	//Just uses center normal
-	/*cout << "Left triangle: " << left << endl;
-	cout << "3D triangle: " << left3d << endl;*/
+	cout << "Ctriangle: " << center << endl;
+	cout << "3Dtriangle: " << center3d << endl;
 	tuple<Vector, Vector> cn_l = centroid(left3d);
 	cout << "Left " << get<0>(cn_l);
 	tuple<Vector, Vector> cn_c = centroid(center3d);
