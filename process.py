@@ -314,7 +314,6 @@ def callOpenSCAD(script, oname, otherargs='', allow_empty=False):
       return True
     if line == '':
       return False
-    print proc.returncode
     proc.terminate()
     raise Exception(' '.join(['call failed : ', ' '.join(call)]))
   else:
@@ -616,14 +615,13 @@ def isEmptySTL(fname=SCRATCH):
         return False
   return True
 
-def shell(stl):
-  deflated = stl.replace('.stl','-deflated.stl')
+def shell(stl, deflated):
   oname = stl.replace('.stl','-shelled.stl')
   writeOpenSCAD(SHELL_SCRIPT, object_body=stl, deflated=deflated)
   callOpenSCAD(SHELL_SCRIPT, oname)
   return oname
 
-def determineFitOffset(components, full, deflated, shelled):
+def determineFitOffset(components, full, shelled):
   # figure out how far back we need to set each component to make it
   # not intersect the body of the object.
   for comp in components:
@@ -739,10 +737,9 @@ def main(obj):
   full = stl
   components = identifyComponents(obj)
   print components
-  stl = stl.replace('.stl','-shelled.stl')#shell(stl)
+  stl = stl.replace('.stl','-shelled.stl')#shell(stl, deflated)
   shelled = stl
-  deflated = stl.replace('-shelled.stl','-deflated.stl')#shell(stl)
-  components = determineFitOffset(components, full, deflated, shelled)
+  components = determineFitOffset(components, full, shelled)
   print components
   checkIntersections(components)
   bosses = calc_bosses(components)
