@@ -18,7 +18,6 @@ sift.txt
 setup.m
 startup.m
 rot/
-sift.txt
 gboxobj/
 ctags/
 cobj/
@@ -28,7 +27,5 @@ paper/
 video/
 MYobj/
 MYtags/
-MYsift.txt
 otherdata/
-sift.txt
-sift copy c4.txt
+jingyi/

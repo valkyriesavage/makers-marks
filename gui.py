@@ -2,6 +2,7 @@
 
 from Tkinter import *
 from tkFileDialog import askopenfilename
+import os
 
 
 class Example(Frame):
@@ -18,7 +19,11 @@ class Example(Frame):
         self.chosen_tags = []
         self.tag_to_add = StringVar()
         self.tag_to_add.set("test")
-        self.possible_tags = ["Button 1","Button 2","Button 3","Button 4", "Joystick 1","Joystick 2","Joystick 3","Joystick 4","Hinge","Mainboard","Servo Mount","Servo Hold","Knob"]
+        self.possible_tags = ["Button 1","Button 2","Button 3","Button 4", "Joystick 1",
+                              "Joystick 2","Mainboard","Camera", "Raspberry Pi",
+                              "Servo Mount","Servo Move", "Distance Sensor", "Hinge",
+                              "Gyroscope", "Speaker", "Right Parting Line",
+                              "Left Parting Line", "Hole 1","Hole 2","Hole 3","Hole 4"]
 
         self.parent.title("Makers\' Marks")
 
@@ -86,6 +91,10 @@ class Example(Frame):
         self.chosen_tags = [self.possible_tags[item] for item in items]
         print "starting with obj at ", self.obj, " tags ", self.chosen_tags
         print "bosses: ", self.boss_s, " lip: ", self.lip_s
+        sort_tags(self.chosen_tags)
+        os.system("python process.py {0} {1} {2}".format(self.obj, self.boss_s, self.lip_s))
+        print "all done! look for the .stl in the current directory."
+        sys.exit()
 
     def openObj(self):
         self.obj = askopenfilename()
@@ -93,13 +102,68 @@ class Example(Frame):
         self.e.insert(0,self.obj)
         self.e.xview_moveto(1)
 
+def sort_tags(tags):
+        tags = renametags(tags)
+        os.system("rm -r tags; mkdir tags")
+        for tag in tags:
+            os.system("cp alltags/{0} tags/{0}".format(tag))
 
+def renametags(tags):
+    new_tags = []
+    for tag in tags:
+        if tag == "Button 1":
+            new_tags.append("b1.jpg")
+        if tag == "Button 2":
+            new_tags.append("b2.jpg")
+        if tag == "Button 3":
+            new_tags.append("b3.jpg")
+        if tag == "Button 4":
+            new_tags.append("b4.jpg")
+        if tag == "Joystick 1":
+            new_tags.append("j1.jpg")
+        if tag == "Joystick 2":
+            new_tags.append("j2.jpg")
+        if tag == "Mainboard":
+            new_tags.append("m.jpg")
+        if tag == "Hole 1":
+            new_tags.append("hole.jpg")
+        if tag == "Hole 2":
+            new_tags.append("hole2.jpg")
+        if tag == "Hole 3":
+            new_tags.append("hole3.jpg")
+        if tag == "Hole 4":
+            new_tags.append("hole4.jpg")
+        if tag == "Right Parting Line":
+            new_tags.append("r.jpg")
+        if tag == "Left Parting Line":
+            new_tags.append("l.jpg")
+        if tag == "Hinge":
+            new_tags.append("h.jpg")
+        if tag == "Servo Mount":
+            new_tags.append("smount.jpg")
+        if tag == "Servo Move":
+            new_tags.append("smove.jpg")
+        if tag == "Camera":
+            new_tags.append("cam.jpg")
+        if tag == "Raspberry Pi":
+            new_tags.append("rpi.jpg")
+        if tag == "Gyroscope":
+            new_tags.append("gyro.jpg")
+        if tag == "Speaker":
+            new_tags.append("s.jpg")
+        if tag == "Distance Sensor":
+            new_tags.append("d.jpg")
+    return new_tags
+
+
+    
 def main():
   
     root = Tk()
     root.geometry("400x350+100+100")
     app = Example(root)
-    root.mainloop()  
+    root.mainloop()
+
 
 
 if __name__ == '__main__':

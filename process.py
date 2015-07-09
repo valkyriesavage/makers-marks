@@ -20,11 +20,20 @@ class Component(Enum):
   servo_move = 15
   boss = 16
   parting_line_calculated = 17
+  camera = 18
+  raspberry_pi = 19
+  hole = 20
 
   @classmethod
   def no_offset(cls):
     return [cls.hinge,cls.knob,cls.handle,cls.hasp,
             cls.parting_line,cls.boss,cls.servo_mount]
+  @classmethod
+  def no_moving(cls):
+    return [cls.button,cls.joystick,cls.parting_line,
+            cls.parting_line_calculated,cls.servo_move,
+            cls.camera,cls.knob]
+
 
   @classmethod
   def part(cls, comptype):
@@ -51,6 +60,9 @@ class Component(Enum):
       'screen':cls.screen,
       'smount':cls.servo_mount,
       'smove':cls.servo_move,
+      'rpi':cls.raspberry_pi,
+      'cam':cls.camera,
+      'hole':cls.hole
       # jingyi, please update this as you add more!
     }
     return match_dict[tinystr]
@@ -71,6 +83,9 @@ class Component(Enum):
         cls.screen: 10,
         cls.servo_mount: 3,
         cls.servo_move: 3,
+        cls.raspberry_pi: 50,
+        cls.camera: 10,
+        cls.hole: 30, #i totally guessed on these last 3 values
       # jingyi, please update this as you add more!
     }
     if not comptype in match_dict:
@@ -178,7 +193,7 @@ def extractSIFTComponentInfo(location=SIFT_OUTPUT):
 def getAlignmentInfo(component):
   # in here we need threed_center, threed_top_right,
   # threed_top_left, and threed_normal
-  #callMatlab(FIND_ROTATION_SCRIPT, component)
+  callMatlab(FIND_ROTATION_SCRIPT, component)
   calculated = extractComponentInfo(location=TRANSFORM_OUTPUT)
   component.update(calculated)
   return component
@@ -207,7 +222,7 @@ def postProcComps(comps):
   return comps
 
 def identifyComponents(obj):
-  callMatlab(SIFT_DETECT_SCRIPT)
+  #callMatlab(SIFT_DETECT_SCRIPT)
   comp_list = extractSIFTComponentInfo(SIFT_OUTPUT)
   print "after matlab, COMP LIST IS "
   print comp_list
@@ -636,8 +651,7 @@ def determineFitOffset(components, full, shelled):
       mod_comp['coords'] = [c_i - n_i for c_i, n_i in zip(loc, normal)]
       writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=shelled)
       empty = createsEmptySTL(CHECK_INTERSECT_SCRIPT, SCRATCH)
-      if empty or ct > 10:
-        # in the > 50 case... wtf???
+      if empty or ct > Component.max_offset(comp):
         break
       loc = mod_comp['coords']
       ct += 1
@@ -645,6 +659,49 @@ def determineFitOffset(components, full, shelled):
     comp['offset'] = ct # note that this is in units of mm
     print 'new:', loc
   return components
+
+def deformShell(components, full, deflated, shelled):
+  warn_user = False
+  # figure out how far FORWARD we need to set each component to make it
+  # not intersect with each other.
+  no_skipped_comps = 0
+  for comp in components:
+    if comp['type'] in Component.no_moving():
+      no_skipped_comps += 1
+      continue
+    if no_skipped_comps == len(components):
+      warn_user = True
+      break
+    loc = comp['coords']
+    normal = comp['threed_normal']
+    ct = 0
+    print 'original: ', loc, ' for ', comp['type']
+    while True:
+      mod_comp = dict(comp)
+      mod_comp['coords'] = [c_i + n_i for c_i, n_i in zip(loc, normal)]
+      writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=shelled)
+      empty = createsEmptySTL(CHECK_INTERSECT_SCRIPT, SCRATCH)
+      if empty or ct > 30:
+        # 30mm=3cm, kinda ugly now!
+        warn_user = True
+        break
+      loc = mod_comp['coords']
+      ct += 1
+    comp['coords'] = loc
+    print 'new:', loc, ' for ', comp['type']
+    if warn_user:
+      raise Exception("Components intersect beyond an aesthetically pleasing fix. Try a redesign?")
+    #add some sort of bounding box union script here
+    bounding_box = ''
+    shelled_bb = ''
+    if comp['type'] == Component.main_board:
+      bounding_box = 'something?'
+      shelled_bb = 'what'
+    #actual obj = callopenscad subtract bounding box (translated) from shell obj
+    #final = callopenscad subtract solid obj from shelled bounding box (translated)
+    #actual obj = callopenscad union actual obj w/ final 
+  return components
+
 
 def checkIntersections(components):
   # check if any component intersects any other component
@@ -655,7 +712,7 @@ def checkIntersections(components):
       writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [c1,c2])
       empty = createsEmptySTL(CHECK_INTERSECT_SCRIPT, SCRATCH)
       if not empty:
-        raise Exception('%(c1)s (%(c1l)s) and %(c2)s (%(c2l)s) intersect!' %
+        print('%(c1)s (%(c1l)s) and %(c2)s (%(c2l)s) intersect!' %
                           {
                             'c1':c1['type'],
                             'c1l':str(c1['coords']),
@@ -663,6 +720,8 @@ def checkIntersections(components):
                             'c2l':str(c2['coords']),
                             }
                        )
+        return True
+  return False
 
 def substitute_components(components, stl, full):
   writeOpenSCAD(SUB_COMPONENT_SCRIPT, components, object_body=stl, full_body=full)
@@ -731,24 +790,35 @@ def add_lip(components, side1, side2, full):
 
 ''' main function '''
 
-def main(obj):
+def main(obj, do_boss, do_lip):
   print obj
   stl = 'obj/'+obj.replace('.obj','.stl')
   full = stl
   components = identifyComponents(obj)
+  # components = [{'threed_top_left': [14.4825, -69.305, 31.2183], 
+  #               'rotations': [0.0, 115.6771, -57.6644], 'threed_center': 
+  #               [27.0732, -65.0131, 39.7664], 'coords': [26.5732, -65.5131, 
+  #               39.7664], 'threed_normal': [0.482059, -0.761493, -0.433299], 
+  #               'axis': [0, 0, -129.9781], 'type': Component.servo_move, 
+  #              'threed_top_right': [29.0246, -65.1106, 58.9107]}]
   print components
   stl = stl.replace('.stl','-shelled.stl')#shell(stl, deflated)
   shelled = stl
   components = determineFitOffset(components, full, shelled)
   print components
-  checkIntersections(components)
-  bosses = calc_bosses(components)
+  need_to_deform = checkIntersections(components)
+  if need_to_deform:
+    deformShell(components, full, deflated, shelled)
+  if do_boss:
+    bosses = calc_bosses(components)
   stl = substitute_components(components, shelled, full)
   side1, side2 = partingLine(components, stl)
-  side1 = boss_addin(side1,full,'top',bosses)
-  side2 = boss_addin(side2,full,'bot',bosses)
-  side1, side2 = add_lip(components, side1, side2, full)
+  if do_boss:
+    side1 = boss_addin(side1,full,'top',bosses)
+    side2 = boss_addin(side2,full,'bot',bosses)
+  if do_lip:
+    side1, side2 = add_lip(components, side1, side2, full)
   print 'done!'
 
 if __name__ == '__main__':
-  main(sys.argv[1])
+  main(sys.argv[1], sys.argv[2], sys.argv[3])
