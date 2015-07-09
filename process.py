@@ -303,7 +303,7 @@ PART_SCRIPT = os.path.join(os.getcwd(), 'part.scad')
 BOSS_CHECK_COMPS_SCRIPT = os.path.join(os.getcwd(), 'bosscheckcomps.scad')
 BOSS_PUT_SCRIPT = os.path.join(os.getcwd(), 'bossput.scad')
 SHELL_SCRIPT = os.path.join(os.getcwd(), 'shell.scad')
-DEFORM_SHELL_SCRIPT = os.path.join(os.getcwd(),'deformshell.stl')
+DEFORM_SHELL_SCRIPT = os.path.join(os.getcwd(),'deformshell.scad')
 MINKOWSKI_TOP = os.path.join(os.getcwd(), 'minkowski-top.scad')
 MINKOWSKI_BOT = os.path.join(os.getcwd(), 'minkowski-bot.scad')
 SCRATCH = os.path.join(os.getcwd(),'scratch.stl')
@@ -684,6 +684,7 @@ def determineFitOffset(components, full, shelled):
   return components
 
 def deformShell(components, full, shelled):
+  oname = shelled
   print 'your components intersect. now deforming shell...'
   warn_user = False
   # figure out how far FORWARD we need to set each component to make it
@@ -706,12 +707,10 @@ def deformShell(components, full, shelled):
       mod_comp['coords'] = [c_i + n_i for c_i, n_i in zip(loc, normal)]
       writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=shelled)
       empty = createsEmptySTL(CHECK_INTERSECT_SCRIPT, SCRATCH)
-      if empty or ct > 100:
-        # 30mm=3cm, kinda ugly now!
-        #print 'empty now at ct ', ct
-        if ct > 100:
-          #print 'ct > 100 crap'
-          warn_user = True
+      if empty:
+        break
+      if ct > 30:
+        warn_user = True
         break
       loc = mod_comp['coords']
       ct += 1
@@ -719,16 +718,16 @@ def deformShell(components, full, shelled):
     print 'new:', loc, ' for ', comp['type']
     if warn_user:
       raise Exception("Components intersect beyond an aesthetically pleasing fix. Try a redesign?")
-    #add some sort of bounding box union script here
+
     #just for the mainboard
     for comp in components:
+      #add more objects here
       if comp['type'] == Component.main_board:
         print 'adding a bounding box to the main board...'
         writeOpenSCAD(DEFORM_SHELL_SCRIPT, comp, object_body=shelled, full_body=full)
-    #actual obj = callopenscad subtract bounding box (translated) from shell obj
-    #final = callopenscad subtract solid obj from shelled bounding box (translated)
-    #actual obj = callopenscad union actual obj w/ final 
-  return components
+        oname = shelled.replace('.stl','-deformed.stl')
+        callOpenSCAD(DEFORM_SHELL_SCRIPT, oname)
+  return oname
 
 
 def checkIntersections(components):
@@ -826,11 +825,14 @@ def main(obj, do_boss, do_lip):
     bosses = True
   if do_lip == 'True' or 'true':
     lips = True
+
   print obj
   stl = 'obj/'+obj.replace('.obj','.stl')
   full = stl
-  print "bossses? ", do_boss, "lip? ", do_lip
+  print "bossses? ", bosses, "lip? ", lips
+
   components = identifyComponents(obj)
+  # this was the data for the original controller.
   # components = [{'threed_top_left': [30.5812, -129.655, 59.6193], 
   #               'rotations': [0.0, 12.0416, 96.79], 'threed_center': 
   #               [22.3764, -140.621, 64.1149], 'coords': [26.024393000000007, 
@@ -858,8 +860,8 @@ def main(obj, do_boss, do_lip):
   #                    'threed_top_right': [73.0373, -154.752, 65.5618]}, 
   #                    {'threed_top_left': [54.8185, -129.418, 37.9397], 'rotations': 
   #                    [0.0, 175.6475, -110.8791], 'threed_center': [24.2125, -157.541, 
-  #                    31.2391], 'coords': [15.847738500000004, -158.68645799999996, 
-  #                    -5.224679999999996], 'threed_normal': [-0.0270477, -0.0709084,
+  #                    31.2391], 'coords': [24.2125, -157.541, 
+  #                    31.2391], 'threed_normal': [-0.0270477, -0.0709084,
   #                     -0.997116], 'axis': [0, 0, -20.4817], 'type': 
   #                      Component.main_board, 'threed_top_right': [-5.38373, 
   #                     -131.955, 30.474]}, {'axis': -19.4488, 'coords': [15.7206, -185.0390, 
@@ -875,10 +877,8 @@ def main(obj, do_boss, do_lip):
   print components
   print 'checking intersections'
   need_to_deform = checkIntersections(components)
-  #need_to_deform = True
   if need_to_deform:
-    deformShell(components, full, shelled)
-    #print "YO DEFORMED FINISHED!"
+    shelled = deformShell(components, full, shelled)
   if bosses:
     bosses = calc_bosses(components)
   stl = substitute_components(components, shelled, full)
