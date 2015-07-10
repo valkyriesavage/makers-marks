@@ -92,6 +92,12 @@ class Component(Enum):
       return 10 # default to 1mm
 
   @classmethod
+  def no_trim(cls, comptype):
+    if comptype == cls.servo_move:
+      return True
+    return False
+
+  @classmethod
   def toStr(cls, comptype):
     return comptype.name
 
@@ -330,7 +336,7 @@ def callOpenSCAD(script, oname, otherargs='', allow_empty=False):
     if line == '':
       return False
     proc.terminate()
-    raise Exception(' '.join(['call failed : ', ' '.join(call)]))
+    raise Exception(' '.join(['call failed : ', ' '.join(call), ", message", line]))
   else:
     subprocess.check_call(call)
   return False
@@ -435,8 +441,11 @@ intersection() {
         # these will be dealt with in a special step later
         continue
       comps_sub += placeCompOpenSCAD(component, geom='sub')
-      comps_add += internalOnly(placeCompOpenSCAD(component, geom='add'),
-                                full_body)
+      if Component.no_trim(component['type']):
+        comps_add += placeCompOpenSCAD(component, geom='add')
+      else:
+        comps_add += internalOnly(placeCompOpenSCAD(component, geom='add'),
+                                  full_body)
     text += '''
 difference() {
 \timport("%(obj)s");
@@ -674,10 +683,12 @@ def determineFitOffset(components, full, shelled):
       mod_comp['coords'] = [c_i - n_i for c_i, n_i in zip(loc, normal)]
       writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=shelled)
       empty = createsEmptySTL(CHECK_INTERSECT_SCRIPT, SCRATCH)
-      if empty or ct > Component.max_offset(comp):
-        break
-      loc = mod_comp['coords']
       ct += 1
+      if empty:
+        break
+      if ct > Component.max_offset(mod_comp['type']):
+        raise Exception(''.join(["can't fit component",str(mod_comp),"into body"]))
+      loc = mod_comp['coords']
     comp['coords'] = loc
     comp['offset'] = ct # note that this is in units of mm
     print 'new:', loc
@@ -833,39 +844,39 @@ def main(obj, do_boss, do_lip):
 
   components = identifyComponents(obj)
   # this was the data for the original controller.
-  # components = [{'threed_top_left': [30.5812, -129.655, 59.6193], 
-  #               'rotations': [0.0, 12.0416, 96.79], 'threed_center': 
-  #               [22.3764, -140.621, 64.1149], 'coords': [26.024393000000007, 
-  #               -145.36394799999997, 58.24692400000002], 'threed_normal': 
-  #               [-0.0246655, 0.207158, 0.977996], 'axis': [0, 0, -95.692], 
-  #               'type':  Component.button, 'threed_top_right': [48.4134, 
-  #               -129.319, 59.1823]}, {'threed_top_left': [0.119901, -131.238, 
-  #               57.4489], 'rotations': [0.0, 4.0543, 133.4089], 'threed_center': 
+  # components = [{'threed_top_left': [30.5812, -129.655, 59.6193],
+  #               'rotations': [0.0, 12.0416, 96.79], 'threed_center':
+  #               [22.3764, -140.621, 64.1149], 'coords': [26.024393000000007,
+  #               -145.36394799999997, 58.24692400000002], 'threed_normal':
+  #               [-0.0246655, 0.207158, 0.977996], 'axis': [0, 0, -95.692],
+  #               'type':  Component.button, 'threed_top_right': [48.4134,
+  #               -129.319, 59.1823]}, {'threed_top_left': [0.119901, -131.238,
+  #               57.4489], 'rotations': [0.0, 4.0543, 133.4089], 'threed_center':
   #               [7.1497, -141.453, 63.4532], 'coords': [0.299243000000001,
-  #                -146.69679799999994, 56.87762399999999], 'threed_normal': 
-  #                [-0.235649, 0.249114, 0.939368], 'axis': [0, 0, -129.9031], 
+  #                -146.69679799999994, 56.87762399999999], 'threed_normal':
+  #                [-0.235649, 0.249114, 0.939368], 'axis': [0, 0, -129.9031],
   #                'type':  Component.button, 'threed_top_right': [28.8909,
   #                 -129.633, 59.8662]}, {'threed_top_left': [0, 0, 0], 'rotations':
   #                  [0.0, 5.3241, 107.9094], 'threed_center': [-37.2577, -172.617,
   #                   69.1782], 'coords': [-37.44382930000003, -174.08821859999986,
-  #                    58.22565399999998], 'threed_normal': [-0.0285337, 0.0882926, 
-  #                    0.995686], 'axis': [0, 0, 152.8863], 'type': 
-  #                     Component.joystick, 'threed_top_right': 
-  #                    [-19.0821, -155.235, 66.3307]}, {'threed_top_left': 
-  #                    [45.1078, -155.669, 66.055], 'rotations': [0.0, 5.1047, 98.3725], 
-  #                    'threed_center': [62.5238, -173.009, 67.3152], 'coords': 
-  #                    [62.16631159999998, -174.4773002999999, 56.35882600000001], 
-  #                    'threed_normal': [-0.0129556, 0.0880273, 0.996034], 'axis': 
-  #                    [0, 0, -96.4875], 'type':  Component.joystick, 
-  #                    'threed_top_right': [73.0373, -154.752, 65.5618]}, 
-  #                    {'threed_top_left': [54.8185, -129.418, 37.9397], 'rotations': 
-  #                    [0.0, 175.6475, -110.8791], 'threed_center': [24.2125, -157.541, 
-  #                    31.2391], 'coords': [24.2125, -157.541, 
+  #                    58.22565399999998], 'threed_normal': [-0.0285337, 0.0882926,
+  #                    0.995686], 'axis': [0, 0, 152.8863], 'type':
+  #                     Component.joystick, 'threed_top_right':
+  #                    [-19.0821, -155.235, 66.3307]}, {'threed_top_left':
+  #                    [45.1078, -155.669, 66.055], 'rotations': [0.0, 5.1047, 98.3725],
+  #                    'threed_center': [62.5238, -173.009, 67.3152], 'coords':
+  #                    [62.16631159999998, -174.4773002999999, 56.35882600000001],
+  #                    'threed_normal': [-0.0129556, 0.0880273, 0.996034], 'axis':
+  #                    [0, 0, -96.4875], 'type':  Component.joystick,
+  #                    'threed_top_right': [73.0373, -154.752, 65.5618]},
+  #                    {'threed_top_left': [54.8185, -129.418, 37.9397], 'rotations':
+  #                    [0.0, 175.6475, -110.8791], 'threed_center': [24.2125, -157.541,
+  #                    31.2391], 'coords': [24.2125, -157.541,
   #                    31.2391], 'threed_normal': [-0.0270477, -0.0709084,
-  #                     -0.997116], 'axis': [0, 0, -20.4817], 'type': 
-  #                      Component.main_board, 'threed_top_right': [-5.38373, 
-  #                     -131.955, 30.474]}, {'axis': -19.4488, 'coords': [15.7206, -185.0390, 
-  #                     48.3318], 'rotations': [0, 85.5722, -166.7193], 'type': 
+  #                     -0.997116], 'axis': [0, 0, -20.4817], 'type':
+  #                      Component.main_board, 'threed_top_right': [-5.38373,
+  #                     -131.955, 30.474]}, {'axis': -19.4488, 'coords': [15.7206, -185.0390,
+  #                     48.3318], 'rotations': [0, 85.5722, -166.7193], 'type':
   #                      Component.parting_line_calculated}]
 
   print 'your components are originally at'
