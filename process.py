@@ -27,11 +27,13 @@ class Component(Enum):
   @classmethod
   def no_offset(cls):
     return [cls.hinge,cls.knob,cls.handle,cls.hasp,
-            cls.parting_line,cls.boss,cls.servo_mount]
+            cls.parting_line,cls.parting_line_calculated,
+            cls.boss,cls.servo_mount]
+  
   @classmethod
-  def no_moving(cls):
-    return [cls.button,cls.joystick,cls.parting_line,
-            cls.parting_line_calculated,cls.servo_move,
+  def no_moving(cls): #for deformation
+    return [cls.button,cls.joystick, cls.parting_line,
+            cls.parting_line_calculated, cls.servo_move,
             cls.camera,cls.knob]
 
 
@@ -69,7 +71,7 @@ class Component(Enum):
 
   @classmethod
   def max_offset(cls, comptype):
-    if Component.no_offset(comptype):
+    if Component.no_offset():
       return 0
     match_dict = {
         cls.button: 30,
@@ -691,23 +693,29 @@ def deformShell(components, full, shelled):
   # not intersect with each other.
   no_skipped_comps = 0
   for comp in components:
+    curr_type = comp['type']
+    print "CURR COMP IS ", curr_type
     if comp['type'] in Component.no_moving():
       no_skipped_comps += 1
       continue
     if no_skipped_comps == len(components):
       warn_user = True
+      print 'we skipped all the components!'
       break
     loc = comp['coords']
     normal = comp['threed_normal']
     ct = 0
-    print 'original: ', loc, ' for ', comp['type']
     while True:
-      #print 'one it! ', ct
       mod_comp = dict(comp)
       mod_comp['coords'] = [c_i + n_i for c_i, n_i in zip(loc, normal)]
-      writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [mod_comp], object_body=shelled)
-      empty = createsEmptySTL(CHECK_INTERSECT_SCRIPT, SCRATCH)
-      if empty:
+      print "new coords checking is ", mod_comp['coords']
+      print "currently we are on ", curr_type
+      mod_comp_list = [comp for comp in components if not (curr_type == comp.get('type'))]
+      #create a new list w/ the modified coordinates
+      mod_comp_list.append(mod_comp)
+      print "checking intersections!"
+      if not checkIntersections(mod_comp_list): #if there are no intersections
+        print "sweet, no intersections"
         break
       if ct > 30:
         warn_user = True
@@ -727,6 +735,8 @@ def deformShell(components, full, shelled):
         writeOpenSCAD(DEFORM_SHELL_SCRIPT, comp, object_body=shelled, full_body=full)
         oname = shelled.replace('.stl','-deformed.stl')
         callOpenSCAD(DEFORM_SHELL_SCRIPT, oname)
+        print 'done!'
+        return oname
   return oname
 
 
@@ -734,7 +744,7 @@ def checkIntersections(components):
   # check if any component intersects any other component
   for c1 in components:
     for c2 in components:
-      if c1 == c2 or c1['type'] is Component.parting_line or c2['type'] is Component.parting_line:
+      if c1 == c2 or c1['type'] is Component.parting_line or c2['type'] is Component.parting_line or c1['type'] is Component.parting_line_calculated or c2['type'] is Component.parting_line_calculated:
         continue
       writeOpenSCAD(CHECK_INTERSECT_SCRIPT, [c1,c2])
       empty = createsEmptySTL(CHECK_INTERSECT_SCRIPT, SCRATCH)
@@ -821,18 +831,17 @@ def main(obj, do_boss, do_lip):
   #lol string -> bool
   bosses = False
   lips = False
-  if do_boss == 'True' or 'true':
+  if do_boss == "True":
     bosses = True
-  if do_lip == 'True' or 'true':
+  if do_lip == "True":
     lips = True
 
   print obj
   stl = 'obj/'+obj.replace('.obj','.stl')
   full = stl
   print "bossses? ", bosses, "lip? ", lips
-
   components = identifyComponents(obj)
-  # this was the data for the original controller.
+  #this was the data for the original controller.
   # components = [{'threed_top_left': [30.5812, -129.655, 59.6193], 
   #               'rotations': [0.0, 12.0416, 96.79], 'threed_center': 
   #               [22.3764, -140.621, 64.1149], 'coords': [26.024393000000007, 
@@ -872,12 +881,14 @@ def main(obj, do_boss, do_lip):
   print components
   stl = stl.replace('.stl','-shelled.stl')#shell(stl, deflated)
   shelled = stl
+  print 'determining fit offsets...'
   components = determineFitOffset(components, full, shelled)
   print 'after determining fit offsets, your components are at'
   print components
   print 'checking intersections'
   need_to_deform = checkIntersections(components)
   if need_to_deform:
+    print "shelling"
     shelled = deformShell(components, full, shelled)
   if bosses:
     bosses = calc_bosses(components)
