@@ -114,6 +114,7 @@ FIND_ROTATION_SCRIPT = os.path.join(os.getcwd(), 'findrot.m')
 TRANSFORM_OUTPUT = os.path.join(os.getcwd(), 'transform.txt')
 SIFT_OUTPUT = os.path.join(os.getcwd(), 'sift.txt')
 
+pushed_comp = [] #yay global list for shell deformation things moved
 
 '''
 We will give the following to this part of the pipeline:
@@ -358,6 +359,18 @@ translate(%(coords)s) {
 '''
   return output % component
 
+def placeBoundingBoxOpenSCAD(component, geom):
+  output = '''
+translate(%(coords)s) {
+  rotate(%(rotations)s) {
+    rotate(%(axis)s)rotate([180,0,0])translate([0,0,7.5]) {
+      import("stls/'''+Component.toStr(component['type'])+'-'+geom+'''.stl");
+    }
+  }
+}
+'''
+  return output % component
+
 def placeBossOpenSCAD(boss, geom='add', topbot=''):
   boss['geom'] = geom
   boss['topbot'] = topbot
@@ -386,6 +399,15 @@ intersection() {
   import("'''+body+'''");
 }
 '''
+def internalOnlyBoundingBox(geometry, body, component): #need to intersect the solid bb as well
+  return '''
+intersection() {
+  '''+geometry+'\n'+'''
+  union() { import("'''+body+'''");
+    '''+placeBoundingBoxOpenSCAD(component, geom='bbsolid')+placeBoundingBoxOpenSCAD(component, geom='bbshell')+'''
+  }
+}
+'''
 
 def writeOpenSCAD(script, components={}, object_body='', deflated='',
                   full_body='', top='', boss=None, bosses=[], topbot='',
@@ -400,16 +422,16 @@ def writeOpenSCAD(script, components={}, object_body='', deflated='',
   }
     ''' % {
     'obj_body':object_body,
-    'solid_bb_clearance':placeCompOpenSCAD(components, geom='bbsolid') #is components supposed to be a dictionary of a single comp?
+    'solid_bb_clearance':placeBoundingBoxSCAD(components, geom='bbsolid') #is components supposed to be a dictionary of a single comp?
   } #subtracts translated solid bounding box from body
 
     text += '''
     difference() {
-     %(shelled_bb)s
+     rotate([180,0,0])translate([0,0,7.5])%(shelled_bb)s
       import("%(solid_obj_body)s");
        }
     ''' % {
-    'shelled_bb':placeCompOpenSCAD(components, geom='bbshell'),
+    'shelled_bb':placeBoundingBoxSCAD(components, geom='bbshell'),
     'solid_obj_body':full_body
   } #subtracts solid body from hollow bounding box
 
@@ -439,12 +461,15 @@ intersection() {
     comps_sub = ''
     comps_add = ''
     for component in components:
-      if component['type'] == Component.parting_line:
+      if component['type'] == Component.parting_line or component['type'] == Component.parting_line_calculated:
         # these will be dealt with in a special step later
         continue
       comps_sub += placeCompOpenSCAD(component, geom='sub')
       if Component.no_trim(component['type']):
         comps_add += placeCompOpenSCAD(component, geom='add')
+      elif component['type'] in pushed_comp:
+        comps_add += internalOnlyBoundingBox(placeCompOpenSCAD(component, geom='add'),
+                                  full_body, component)
       else:
         comps_add += internalOnly(placeCompOpenSCAD(component, geom='add'),
                                   full_body)
@@ -742,6 +767,8 @@ def deformShell(components, full, shelled):
     for comp in components:
       #add more objects here
       if comp['type'] == Component.main_board:
+        global pushed_comp
+        pushed_comp.append(comp['type'])
         print 'adding a bounding box to the main board...'
         writeOpenSCAD(DEFORM_SHELL_SCRIPT, comp, object_body=shelled, full_body=full)
         oname = shelled.replace('.stl','-deformed.stl')
@@ -851,58 +878,45 @@ def main(obj, do_boss, do_lip):
   stl = 'obj/'+obj.replace('.obj','.stl')
   full = stl
   print "bossses? ", bosses, "lip? ", lips
-  components = identifyComponents(obj)
+  #components = identifyComponents(obj)
   #this was the data for the original controller.
-  # components = [{'threed_top_left': [30.5812, -129.655, 59.6193], 
-  #               'rotations': [0.0, 12.0416, 96.79], 'threed_center': 
-  #               [22.3764, -140.621, 64.1149], 'coords': [26.024393000000007, 
-  #               -145.36394799999997, 58.24692400000002], 'threed_normal': 
-  #               [-0.0246655, 0.207158, 0.977996], 'axis': [0, 0, -95.692], 
-  #               'type':  Component.button, 'threed_top_right': [48.4134, 
-  #               -129.319, 59.1823]}, {'threed_top_left': [0.119901, -131.238, 
-  #               57.4489], 'rotations': [0.0, 4.0543, 133.4089], 'threed_center': 
-  #               [7.1497, -141.453, 63.4532], 'coords': [0.299243000000001,
-  #                -146.69679799999994, 56.87762399999999], 'threed_normal':
-  #                [-0.235649, 0.249114, 0.939368], 'axis': [0, 0, -129.9031],
-  #                'type':  Component.button, 'threed_top_right': [28.8909,
-  #                 -129.633, 59.8662]}, {'threed_top_left': [0, 0, 0], 'rotations':
-  #                  [0.0, 5.3241, 107.9094], 'threed_center': [-37.2577, -172.617,
-  #                   69.1782], 'coords': [-37.44382930000003, -174.08821859999986,
-  #                    58.22565399999998], 'threed_normal': [-0.0285337, 0.0882926,
-  #                    0.995686], 'axis': [0, 0, 152.8863], 'type':
-  #                     Component.joystick, 'threed_top_right':
-  #                    [-19.0821, -155.235, 66.3307]}, {'threed_top_left':
-  #                    [45.1078, -155.669, 66.055], 'rotations': [0.0, 5.1047, 98.3725],
-  #                    'threed_center': [62.5238, -173.009, 67.3152], 'coords':
-  #                    [62.16631159999998, -174.4773002999999, 56.35882600000001],
-  #                    'threed_normal': [-0.0129556, 0.0880273, 0.996034], 'axis':
-  #                    [0, 0, -96.4875], 'type':  Component.joystick,
-  #                    'threed_top_right': [73.0373, -154.752, 65.5618]},
-  #                    {'threed_top_left': [54.8185, -129.418, 37.9397], 'rotations':
-  #                    [0.0, 175.6475, -110.8791], 'threed_center': [24.2125, -157.541,
-  #                    31.2391], 'coords': [24.2125, -157.541,
-  #                    31.2391], 'threed_normal': [-0.0270477, -0.0709084,
-  #                     -0.997116], 'axis': [0, 0, -20.4817], 'type':
-  #                      Component.main_board, 'threed_top_right': [-5.38373,
-  #                     -131.955, 30.474]}, {'axis': -19.4488, 'coords': [15.7206, -185.0390,
-  #                     48.3318], 'rotations': [0, 85.5722, -166.7193], 'type':
-  #                      Component.parting_line_calculated}]
-
-  print 'your components are originally at'
-  print components
+  components = [{'threed_top_right': [48.4134, -129.319, 59.1823], 'coords': [26.024393000000007, -145.36394799999997, 
+                58.24692400000002], 'threed_top_left': [30.5812, -129.655, 59.6193], 'type': Component.button, 
+                'threed_normal': [-0.0246655, 0.207158, 0.977996], 'rotations': [0.0, 12.0416, 96.79], 'threed_center':
+                 [22.3764, -140.621, 64.1149], 'offset': 0, 'axis': [0, 0, -95.692]}, {'threed_top_right': [28.8909, 
+                 -129.633, 59.8662], 'coords': [0.299243000000001, -146.69679799999994, 56.87762399999999], 
+                 'threed_top_left': [0.119901, -131.238, 57.4489], 'type': Component.button, 'threed_normal': 
+                 [-0.235649, 0.249114, 0.939368], 'rotations': [0.0, 4.0543, 133.4089], 'threed_center': [7.1497, 
+                 -141.453, 63.4532], 'offset': 0, 'axis': [0, 0, -129.9031]}, {'threed_top_right': [-19.0821, -155.235, 
+                 66.3307], 'coords': [-37.415295600000036, -174.17651119999985, 57.22996799999998], 'threed_top_left': 
+                 [0, 0, 0], 'type': Component.joystick, 'threed_normal': [-0.0285337, 0.0882926, 0.995686], 
+                 'rotations': [0.0, 5.3241, 107.9094], 'threed_center': [-37.2577, -172.617, 69.1782], 'offset': 1, 
+                 'axis': [0, 0, 152.8863]}, {'threed_top_right': [73.0373, -154.752, 65.5618], 'coords': 
+                 [62.17926719999998, -174.5653275999999, 55.362792000000006], 'threed_top_left': [45.1078, -155.669, 
+                 66.055], 'type': Component.joystick, 'threed_normal': [-0.0129556, 0.0880273, 0.996034], 
+                 'rotations': [0.0, 5.1047, 98.3725], 'threed_center': [62.5238, -173.009, 67.3152], 'offset': 1, 'axis':
+                  [0, 0, -96.4875]}, {'threed_top_right': [-5.38373, -131.955, 30.474], 'coords': [24.2395477, 
+                  -157.4700916, 32.236216], 'threed_top_left': [54.8185, -129.418, 37.9397], 'type': 
+                  Component.main_board, 'threed_normal': [-0.0270477, -0.0709084, -0.997116], 'rotations': 
+                  [0.0, 175.6475, -110.8791], 'threed_center': [24.2125, -157.541, 31.2391], 'offset': 1, 'axis': 
+                  [0, 0, -20.4817]}, {'rotations': [0, 85.5722, -166.7193], 'type': Component.parting_line_calculated, 
+                  'coords': [15.7206, -185.039, 48.3318], 'axis': -19.4488}]
+  #print 'your components are originally at'
+  #print components
   stl = stl.replace('.stl','-shelled.stl')#shell(stl, deflated)
   shelled = stl
   print 'determining fit offsets...'
-  components = determineFitOffset(components, full, shelled)
+  #components = determineFitOffset(components, full, shelled)
   print 'after determining fit offsets, your components are at'
   print components
   print 'checking intersections'
-  need_to_deform = checkIntersections(components)
-  if need_to_deform:
-    print "shelling"
-    shelled = deformShell(components, full, shelled)
+  #need_to_deform = checkIntersections(components)
+  # if need_to_deform:
+  #   print "shelling"
+  #   shelled = deformShell(components, full, shelled)
   if bosses:
     bosses = calc_bosses(components)
+  print 'RUNNING SUB COMP'
   stl = substitute_components(components, shelled, full)
   side1, side2 = partingLine(components, stl)
   if bosses:
