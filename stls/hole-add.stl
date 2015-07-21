@@ -1,0 +1,142 @@
+solid OpenSCAD_Model
+  facet normal -0.999558 -0.0213294 -0.0206912
+    outer loop
+      vertex 14.69 -140.857 45.3544
+      vertex 14.5554 -134.082 44.8762
+      vertex 14.6674 -135.024 40.4327
+    endloop
+  endfacet
+  facet normal 0.0165737 -0.978073 0.207601
+    outer loop
+      vertex 27.8932 -162.137 46.5095
+      vertex 15.1158 -162.278 46.8661
+      vertex 15.1315 -162.41 46.2453
+    endloop
+  endfacet
+  facet normal -0.0165739 0.978075 -0.207593
+    outer loop
+      vertex 37.6573 -134.533 40.9086
+      vertex 21.0336 -134.011 44.6954
+      vertex 37.5734 -133.829 44.2338
+    endloop
+  endfacet
+  facet normal -0.0165741 0.978075 -0.207593
+    outer loop
+      vertex 21.0336 -134.011 44.6954
+      vertex 37.6573 -134.533 40.9086
+      vertex 14.6674 -135.024 40.4327
+    endloop
+  endfacet
+  facet normal -0.999558 -0.0213297 -0.0206915
+    outer loop
+      vertex 14.6674 -135.024 40.4327
+      vertex 14.7608 -144.416 45.6055
+      vertex 14.69 -140.857 45.3544
+    endloop
+  endfacet
+  facet normal -0.999558 -0.0213296 -0.0206914
+    outer loop
+      vertex 15.1315 -162.41 46.2453
+      vertex 14.7608 -144.416 45.6055
+      vertex 14.6674 -135.024 40.4327
+    endloop
+  endfacet
+  facet normal -0.999558 -0.0213296 -0.020691
+    outer loop
+      vertex 14.7608 -144.416 45.6055
+      vertex 15.1315 -162.41 46.2453
+      vertex 15.1158 -162.278 46.8661
+    endloop
+  endfacet
+  facet normal -0.0165731 0.978075 -0.207595
+    outer loop
+      vertex 14.6674 -135.024 40.4327
+      vertex 14.5554 -134.082 44.8762
+      vertex 21.0336 -134.011 44.6954
+    endloop
+  endfacet
+  facet normal 0.999558 0.0213296 0.0206914
+    outer loop
+      vertex 37.6573 -134.533 40.9086
+      vertex 37.5734 -133.829 44.2338
+      vertex 38.0609 -158.355 45.9647
+    endloop
+  endfacet
+  facet normal 0.0246662 -0.207159 -0.977996
+    outer loop
+      vertex 32.9977 -160.238 46.236
+      vertex 37.6573 -134.533 40.9086
+      vertex 38.0609 -158.355 45.9647
+    endloop
+  endfacet
+  facet normal 0.0246655 -0.207159 -0.977996
+    outer loop
+      vertex 14.6674 -135.024 40.4327
+      vertex 32.9977 -160.238 46.236
+      vertex 27.8932 -162.137 46.5095
+    endloop
+  endfacet
+  facet normal 0.0246657 -0.207158 -0.977996
+    outer loop
+      vertex 14.6674 -135.024 40.4327
+      vertex 27.8932 -162.137 46.5095
+      vertex 15.1315 -162.41 46.2453
+    endloop
+  endfacet
+  facet normal 0.0246655 -0.207159 -0.977996
+    outer loop
+      vertex 32.9977 -160.238 46.236
+      vertex 14.6674 -135.024 40.4327
+      vertex 37.6573 -134.533 40.9086
+    endloop
+  endfacet
+  facet normal 0.0270473 0.070909 0.997116
+    outer loop
+      vertex 37.5734 -133.829 44.2338
+      vertex 32.9977 -160.238 46.236
+      vertex 38.0609 -158.355 45.9647
+    endloop
+  endfacet
+  facet normal 0.0270479 0.0709089 0.997116
+    outer loop
+      vertex 21.0336 -134.011 44.6954
+      vertex 32.9977 -160.238 46.236
+      vertex 37.5734 -133.829 44.2338
+    endloop
+  endfacet
+  facet normal 0.0270478 0.0709089 0.997116
+    outer loop
+      vertex 21.0336 -134.011 44.6954
+      vertex 14.7608 -144.416 45.6055
+      vertex 32.9977 -160.238 46.236
+    endloop
+  endfacet
+  facet normal 0.0270476 0.070909 0.997116
+    outer loop
+      vertex 21.0336 -134.011 44.6954
+      vertex 14.69 -140.857 45.3544
+      vertex 14.7608 -144.416 45.6055
+    endloop
+  endfacet
+  facet normal 0.0270476 0.070909 0.997116
+    outer loop
+      vertex 14.69 -140.857 45.3544
+      vertex 21.0336 -134.011 44.6954
+      vertex 14.5554 -134.082 44.8762
+    endloop
+  endfacet
+  facet normal 0.0270479 0.070909 0.997116
+    outer loop
+      vertex 14.7608 -144.416 45.6055
+      vertex 27.8932 -162.137 46.5095
+      vertex 32.9977 -160.238 46.236
+    endloop
+  endfacet
+  facet normal 0.0270477 0.0709089 0.997116
+    outer loop
+      vertex 27.8932 -162.137 46.5095
+      vertex 14.7608 -144.416 45.6055
+      vertex 15.1158 -162.278 46.8661
+    endloop
+  endfacet
+endsolid OpenSCAD_Model
