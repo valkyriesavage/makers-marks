@@ -315,6 +315,7 @@ SHELL_SCRIPT = os.path.join(os.getcwd(), 'shell.scad')
 DEFORM_SHELL_SCRIPT = os.path.join(os.getcwd(),'deformshell.scad')
 MINKOWSKI_TOP = os.path.join(os.getcwd(), 'minkowski-top.scad')
 MINKOWSKI_BOT = os.path.join(os.getcwd(), 'minkowski-bot.scad')
+BUTTON_CAP_SCRIPT =  os.path.join(os.getcwd(), 'button-caps.scad')
 SCRATCH = os.path.join(os.getcwd(),'scratch.stl')
 '''
 We will give the following to this part of the pipeline:
@@ -422,7 +423,7 @@ def writeOpenSCAD(script, components={}, object_body='', deflated='',
   }
     ''' % {
     'obj_body':object_body,
-    'solid_bb_clearance':placeBoundingBoxSCAD(components, geom='bbsolid') #is components supposed to be a dictionary of a single comp?
+    'solid_bb_clearance':placeBoundingBoxSCAD(components, geom='bbsolid')
   } #subtracts translated solid bounding box from body
 
     text += '''
@@ -515,6 +516,17 @@ intersection(){
     'obj':object_body,
     'pline':pline,
     }
+
+  if script == BUTTON_CAP_SCRIPT:
+    print "cutting button caps by ", components['offset']
+    text += '''
+difference() {
+import("stls/button-cap.stl");
+translate([0,0,-%(z)s])import("stls/button-cap-sub.stl");
+}
+''' % {
+    'z':components['offset'],
+  }
 
   if script == BOSS_CHECK_COMPS_SCRIPT:
     all_comp_union = 'union(){'
@@ -849,8 +861,10 @@ def partingLine(components, stl):
   o_top = stl.replace('.stl', '-top.stl')
   o_bot = stl.replace('.stl', '-bot.stl')
   writeOpenSCAD(PART_SCRIPT, components, object_body=stl, top=True)
+  print 'calling top...'
   callOpenSCAD(PART_SCRIPT, o_top)
   writeOpenSCAD(PART_SCRIPT, components, object_body=stl, top=False)
+  print 'calling bottom...'
   callOpenSCAD(PART_SCRIPT, o_bot)
   return (o_top,o_bot)
 
@@ -862,6 +876,11 @@ def add_lip(components, side1, side2, full):
   writeOpenSCAD(MINKOWSKI_TOP, components, object_body=side2, full_body=full)
   callOpenSCAD(MINKOWSKI_TOP, o_bot)
   return (o_top, o_bot)
+
+def createButtonCaps(button, i):
+  writeOpenSCAD(BUTTON_CAP_SCRIPT, button)
+  button_stl = 'button-cap-%s.stl' % i
+  callOpenSCAD(BUTTON_CAP_SCRIPT, button_stl)
 
 ''' main function '''
 
@@ -880,7 +899,7 @@ def main(obj, do_boss, do_lip):
   print "bossses? ", bosses, "lip? ", lips
   #components = identifyComponents(obj)
   #POTATO HEAD DATA
-  components = [{'threed_top_left': [-5.3625, -112.47, 32.1462], 'rotations': [0.0, 29.8674, 17.5899], 'threed_center': [-2.29094, -124.015, 36.4175], 'coords': [-2.7909, -124.515, 36.4175], 'threed_normal': [0.474711, 0.150495, 0.86718], 'axis': [0, 0, -61.8952], 'type': Component.hole, 'threed_top_right': [7.70112, -124.859, 29.406]}, {'threed_top_left': [-105.593, -102.244, 3.36222], 'rotations': [0.0, 61.4546, -133.2476], 'threed_center': [-96.8859, -117.769, -0.846868], 'coords': [-97.3859, -118.269, -0.8469], 'threed_normal': [-0.601864, -0.639855, 0.477855], 'axis': [0, 0, 46.1244], 'type': Component.camera, 'threed_top_right': [-85.5445, -114.481, 13.5682]}, {'threed_top_left': [-12.468, -183.437, -3.48881], 'rotations': [0.0, 113.8029, -41.24], 'threed_center': [-22.4819, -190.648, -7.18205], 'coords': [-22.9819, -191.148, -7.1821], 'threed_normal': [0.687993, -0.603141, -0.403592], 'axis': [0, 0, 49.5514], 'type': Component.hole, 'threed_top_right': [-26.6332, -180.814, -16.8645]}, {'threed_top_left': [-19.6959, -132.91, 51.6941], 'rotations': [0.0, 35.0212, 24.6394], 'threed_center': [-17.5365, -144.396, 57.0271], 'coords': [-18.0365, -144.896, 57.0271], 'threed_normal': [0.521628, 0.239254, 0.818939], 'axis': [0, 0, -75.1998], 'type': Component.hole, 'threed_top_right': [-8.15362, -146.339, 48.9168]}, {'threed_top_left': [0.764605, -161.391, -15.8978], 'rotations': [0.0, 117.9455, -54.7109], 'threed_center': [-10.3473, -167.785, -18.5927], 'coords': [-10.8473, -168.285, -18.5927], 'threed_normal': [0.510339, -0.721068, -0.468631], 'axis': [0, 0, 62.6797], 'type': Component.hole, 'threed_top_right': [-13.5225, -159.02, -27.4918]}, {'threed_top_left': [-13.5126, -176.155, -10.608], 'rotations': [0.0, 87.0968, -21.1242], 'threed_center': [2.06045, -166.473, 20.7883], 'coords': [1.5604, -166.973, 20.7883], 'threed_normal': [0.931605, -0.359928, 0.0506483], 'axis': [0, 0, 149.4542], 'type': Component.raspberry_pi, 'threed_top_right': [-60.5383, -119.175, 32.1136]}]
+  #components = [{'threed_top_left': [-5.3625, -112.47, 32.1462], 'rotations': [0.0, 29.8674, 17.5899], 'threed_center': [-2.29094, -124.015, 36.4175], 'coords': [-2.7909, -124.515, 36.4175], 'threed_normal': [0.474711, 0.150495, 0.86718], 'axis': [0, 0, -61.8952], 'type': Component.hole, 'threed_top_right': [7.70112, -124.859, 29.406]}, {'threed_top_left': [-105.593, -102.244, 3.36222], 'rotations': [0.0, 61.4546, -133.2476], 'threed_center': [-96.8859, -117.769, -0.846868], 'coords': [-97.3859, -118.269, -0.8469], 'threed_normal': [-0.601864, -0.639855, 0.477855], 'axis': [0, 0, 46.1244], 'type': Component.camera, 'threed_top_right': [-85.5445, -114.481, 13.5682]}, {'threed_top_left': [-12.468, -183.437, -3.48881], 'rotations': [0.0, 113.8029, -41.24], 'threed_center': [-22.4819, -190.648, -7.18205], 'coords': [-22.9819, -191.148, -7.1821], 'threed_normal': [0.687993, -0.603141, -0.403592], 'axis': [0, 0, 49.5514], 'type': Component.hole, 'threed_top_right': [-26.6332, -180.814, -16.8645]}, {'threed_top_left': [-19.6959, -132.91, 51.6941], 'rotations': [0.0, 35.0212, 24.6394], 'threed_center': [-17.5365, -144.396, 57.0271], 'coords': [-18.0365, -144.896, 57.0271], 'threed_normal': [0.521628, 0.239254, 0.818939], 'axis': [0, 0, -75.1998], 'type': Component.hole, 'threed_top_right': [-8.15362, -146.339, 48.9168]}, {'threed_top_left': [0.764605, -161.391, -15.8978], 'rotations': [0.0, 117.9455, -54.7109], 'threed_center': [-10.3473, -167.785, -18.5927], 'coords': [-10.8473, -168.285, -18.5927], 'threed_normal': [0.510339, -0.721068, -0.468631], 'axis': [0, 0, 62.6797], 'type': Component.hole, 'threed_top_right': [-13.5225, -159.02, -27.4918]}, {'threed_top_left': [-13.5126, -176.155, -10.608], 'rotations': [0.0, 87.0968, -21.1242], 'threed_center': [2.06045, -166.473, 20.7883], 'coords': [1.5604, -166.973, 20.7883], 'threed_normal': [0.931605, -0.359928, 0.0506483], 'axis': [0, 0, 149.4542], 'type': Component.raspberry_pi, 'threed_top_right': [-60.5383, -119.175, 32.1136]}]
 
 
   #this was the data for the original controller.
@@ -912,7 +931,7 @@ def main(obj, do_boss, do_lip):
   print 'determining fit offsets...'
   components = determineFitOffset(components, full, shelled)
   print 'after determining fit offsets, your components are at'
-  print components
+  #print components
   print 'checking intersections'
   need_to_deform = checkIntersections(components)
   if need_to_deform:
@@ -922,10 +941,20 @@ def main(obj, do_boss, do_lip):
     bosses = calc_bosses(components)
   print 'RUNNING SUB COMP'
   stl = substitute_components(components, shelled, full)
+  # ###button caps###
+  for comp in components:
+    print "runnign BC"
+    i = 1 
+    if (Component.button == comp.get('type')): #if there's a button
+      print "button %s detected!" % i
+      createButtonCaps(comp, i) #pass the button
+      i += 1
+  print 'NOW RUNNING PARTING LINE'
   side1, side2 = partingLine(components, stl)
   if bosses:
     side1 = boss_addin(side1,full,'top',bosses)
     side2 = boss_addin(side2,full,'bot',bosses)
+  print 'NOW RUNNING LIP!'
   if lips:
     side1, side2 = add_lip(components, side1, side2, full)
 
