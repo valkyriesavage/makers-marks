@@ -121,3 +121,19 @@ should be at least as big as the subtractive geometry, but may also
 include some space for electrical connectors (for electronics) or
 other necessary space. Our hinge's clearance geometry also includes
 space behind it for the hinged parts to open.
+
+Potential Weird Stuff
+---------------------
+
+This is research code, written during my PhD. As such, it's not super
+robust! I definitely want it to be accessible for others to use, but I am not a
+perfect software engineer. Here are some things that may go wrong:
+
+### Shelling
+
+OpenSCAD can generate a shell of your object automatically, but it doesn't work
+that well (it is verrrrrrry slow). You can manually shell your object to speed
+up processing. I have used
+[Meshmixer](http://www.meshmixer.com/) and
+[Meshlab](meshlab.sourceforge.net/) for this purpose. If you shell on your own,
+you will also have to change some of the code in process.py to reflect that.
