@@ -83,7 +83,7 @@ very standardized mounting holes. Your mileage may vary.
 
 ### Tag Image
 
-The tag image should be a .jpg stored in the /alltags folder. Note that these
+The tag image should be a .jpg stored in the /tags folder. Note that these
 images must be in RGB color space rather than CMYK. Also, since these are going
 to be read by a computer, they need some distinctive marks. Right now our
 tags incorporate different fonts and vector images from
