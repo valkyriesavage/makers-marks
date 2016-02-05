@@ -6,7 +6,7 @@ as your design tool: no need for clunky CAD tools! Simply create an object
 that you want to add functionality to out of clay, paper, or whatever you
 have on hand :
 
-![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
+![sculpted object](imgs/blank.png "Sculpted clay game controller")
 
 Then, print out stickers for the functionality you want. This prototype
 supports buttons, joysticks, cameras, raspberry pis, servos, LEDs, screens,
@@ -14,7 +14,7 @@ gyroscopes, speakers, processing boards, distance sensors, parting lines,
 knobs, hinges, and holes. Once you've printed your stickers, just stick
 them on where you want them:
 
-![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
+![annotated object](imgs/annotated.png "Annotated clay game controller")
 
 Now, 3D scan your object. We tested with a
 [NextEngine](www.nextengine.com/ "NextEngine 3D Scanner")
@@ -25,13 +25,13 @@ as long as you get an *OBJ file with color* out of it, it's not a big
 deal. Put the .jpgs and .mtl file and everything together in the
 objs/ folder of the main directory here.
 
-![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
+![scanned object](imgs/obj.png "Digitized clay game controller")
 
 Now boot up the software. Just run "gui.py". Select the tags you used in
 your design (narrowing it down speeds up processing) and browse to find the OBJ
 of your object.
 
-![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
+![interface](imgs/interface.png "GUI interface of Makers' Marks")
 
 Hit go, and off you go! Though it will take a long time to process, eventually
 the program will spit out an STL or two for you to print.
@@ -61,10 +61,10 @@ Adding New Components to Makers' Marks
 --------------------------------------
 
 Each component in Makers' Marks has several parts associated with it: a physical
-part, a tag image, and three kinds of geometry. We need additive, subtractive,
-and clearance geometry to perform our calculations.
+part, a tag image, and three kinds of geometry. We need subtractive, clearance,
+and additive geometry to perform our calculations.
 
-![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
+![joystick geometry](imgs/joystick-geom.jpg "additive, subtractive, and clearance geometry for joystick")
 
 Once you have the geometries, you'll have to make a few code modifications. The
 new component needs to be added to component.py , with a link between the name
